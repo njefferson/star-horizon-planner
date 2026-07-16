@@ -16,7 +16,7 @@ import { el } from './dom.js';
 
 // Map text size — the "Aa" button. One preference for every map on this
 // device (localStorage), applied as the --tx multiplier the label CSS uses.
-const TEXT_KEY = 's50.maptext';
+const TEXT_KEY = 'horizon.maptext';
 const TEXT_TIERS = [
   { k: 1,   label: 'Small' },
   { k: 1.3, label: 'Medium' },

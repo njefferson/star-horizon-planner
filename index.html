@@ -8,7 +8,7 @@
   <script>
     (function () {
       try {
-        var t = localStorage.getItem('s50.theme');
+        var t = localStorage.getItem('horizon.theme');
         if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
         var m = document.querySelector('meta[name="theme-color"]');
         if (m) m.setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#12131c' : '#ebe1cf');

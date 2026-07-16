@@ -6,7 +6,7 @@
 // =============================================================================
 import { el } from './dom.js';
 
-const KEY = 's50.theme';
+const KEY = 'horizon.theme';
 
 // Line icons in the same family as the tab bar (stroke = currentColor, 18px).
 const MOON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
