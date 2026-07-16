@@ -1,11 +1,14 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v1';
+const CACHE = 'horizon-v2';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',
   './src/ui/dom.js', './src/ui/panzoom.js', './src/ui/theme.js', './src/ui/about.js',
+  './src/ui/targets.js', './src/ui/settings.js',
+  './src/model/astro.js', './src/model/instruments.js', './src/model/catalog.js',
+  './src/data/instruments.js', './src/data/catalog.json',
   './src/vendor/astronomy.js',
 ];
 

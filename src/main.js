@@ -9,6 +9,8 @@
 import { el } from './ui/dom.js';
 import { mountAbout } from './ui/about.js';
 import { mountThemeToggle } from './ui/theme.js';
+import { renderTargets } from './ui/targets.js';
+import { renderSettings } from './ui/settings.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -63,24 +65,25 @@ function placeholder(title, blurb) {
   ]);
 }
 
-const VIEWS = {
+// Placeholder screens for the tabs whose features land in later build-order
+// steps (night graph, horizon editor, sites manager).
+const PLACEHOLDERS = {
   '#/': () => placeholder('Tonight',
     'The night graph: altitude-vs-time curves for your selected targets, cut by YOUR measured horizon, with twilight bands and sun/moon markers.'),
-  '#/targets': () => placeholder('Targets',
-    'The bundled deep-sky catalog with type, magnitude and size filters — plus a fits-the-active-instrument / mosaic tier and your favourites.'),
   '#/horizon': () => placeholder('Horizon',
     'Your custom horizon profile: a 36-row (10° azimuth) altitude table you drag to match the real treeline, with Stellarium import/export.'),
   '#/sites': () => placeholder('Sites',
     'Your named observing sites — each with its own coordinates and horizon profile — plus a switcher and JSON export/import.'),
-  '#/settings': () => placeholder('Settings',
-    'Active instrument (S50 default, S30 bundled, custom scopes), theme, and app preferences.'),
 };
 
 function render() {
   const h = location.hash || '#/';
   renderTabs();
   window.scrollTo(0, 0);
-  const view = VIEWS[h] || VIEWS['#/'];
+  // Live views own their async rendering into `app`; placeholders are synchronous.
+  if (h.startsWith('#/targets')) return renderTargets(app, state, nav);
+  if (h.startsWith('#/settings')) return renderSettings(app, state, nav);
+  const view = PLACEHOLDERS[h] || PLACEHOLDERS['#/'];
   app.replaceChildren(view());
 }
 
