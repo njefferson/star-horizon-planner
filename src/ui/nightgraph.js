@@ -11,11 +11,11 @@
 // =============================================================================
 import { el, clear } from './dom.js';
 import { makeObserver, altitudeCurve, moonAltAz, moonInfo } from '../model/astro.js';
-import { loadHorizon, isAbove, isFlat } from '../model/horizon.js';
+import { makeHorizon, isAbove, isFlat } from '../model/horizon.js';
 import { visibility } from '../model/visibility.js';
 import { activeInstrument } from '../model/instruments.js';
 import { loadCatalog, favoriteIds } from '../model/catalog.js';
-import { loadLocation, saveLocation, requestGeolocation } from '../model/location.js';
+import { activeSite } from '../model/sites.js';
 import { nightWindow, sampleTwilight } from '../model/night.js';
 
 const H = 320;                    // graph height, CSS px
@@ -31,8 +31,8 @@ const MAX_TARGETS = 8;
 
 export async function renderTonight(app, state, nav) {
   clear(app);
-  const loc = loadLocation();
-  if (!loc) return app.append(locationGate(nav));
+  const site = activeSite();
+  if (!site) return app.append(noSiteGate(nav));
 
   app.append(el('p.empty', {}, 'Loading tonight…'));
   let objects;
@@ -42,7 +42,7 @@ export async function renderTonight(app, state, nav) {
   const favIds = favoriteIds();
   const targets = objects.filter((o) => favIds.has(o.id)).slice(0, MAX_TARGETS);
   clear(app);
-  app.append(header(state, nav, loc, targets.length, favIds.size));
+  app.append(header(state, nav, site, targets.length, favIds.size));
 
   if (!targets.length) {
     app.append(deadEnd('No targets picked yet',
@@ -51,8 +51,8 @@ export async function renderTonight(app, state, nav) {
     return;
   }
 
-  const observer = makeObserver(loc.lat, loc.lon, 0);
-  const profile = loadHorizon();
+  const observer = makeObserver(site.lat, site.lon, site.elevation_m || 0);
+  const profile = makeHorizon(site.horizon);
   const win = nightWindow(observer, state.night);
   const twilight = sampleTwilight(observer, win.start, win.end, STEP_MIN);
 
@@ -217,17 +217,15 @@ function drawScrub(ctx, s, ms, series, profile, observer, readout) {
 }
 
 // --- header / gates / legend ------------------------------------------------
-function header(state, nav, loc, shown, favCount) {
-  const label = loc.label || `${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)}`;
+function header(state, nav, site, shown, favCount) {
+  const label = site.name || `${site.lat.toFixed(2)}, ${site.lon.toFixed(2)}`;
   return el('div.ng-head', {}, [
-    el('div.ng-head-top', {}, [
-      el('h1', {}, 'Tonight'),
-      el('button.chip', { onclick: () => openLocation(nav) }, `📍 ${label}`),
-    ]),
+    el('div.ng-head-top', {}, [el('h1', {}, 'Tonight')]),
     el('div.ng-datenav', {}, [
       el('button.btn.small', { onclick: () => shiftNight(state, nav, -1) }, '‹ Prev'),
       el('button.btn.small', { onclick: () => { state.night = noonToday(); nav.rerender(); } }, nightLabel(state.night)),
       el('button.btn.small', { onclick: () => shiftNight(state, nav, +1) }, 'Next ›'),
+      el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${label}`),
     ]),
     favCount > shown ? el('p.dim.small', {}, `Showing ${shown} of ${favCount} favourites (first ${MAX_TARGETS}).`) : null,
   ]);
@@ -288,39 +286,10 @@ function hintText(profile) {
     : 'Drag across the graph to read each target’s altitude and whether it clears your horizon.')];
 }
 
-function locationGate(nav) {
-  return deadEndNode('Set your location', 'The night graph needs your latitude and longitude to place the sky.', [
-    el('button.btn.primary', { onclick: async () => {
-      const l = await requestGeolocation();
-      if (l) nav.rerender(); else openLocation(nav);
-    } }, 'Use my location'),
-    el('button.btn', { onclick: () => openLocation(nav) }, 'Enter manually'),
+function noSiteGate(nav) {
+  return deadEndNode('Add an observing site', 'The night graph needs a site — its coordinates place the sky and its horizon cuts the curves.', [
+    el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites'),
   ]);
-}
-
-function openLocation(nav) {
-  document.querySelector('.loc-dialog')?.remove();
-  const cur = loadLocation() || {};
-  const lat = el('input.loc-in', { type: 'number', step: '0.0001', placeholder: 'Latitude', value: cur.lat ?? '' });
-  const lon = el('input.loc-in', { type: 'number', step: '0.0001', placeholder: 'Longitude', value: cur.lon ?? '' });
-  const name = el('input.loc-in', { type: 'text', placeholder: 'Label (optional)', value: cur.label ?? '' });
-  const dlg = el('dialog.loc-dialog', {}, [
-    el('h2', {}, 'Observing location'),
-    el('div.loc-grid', {}, [labeled('Latitude', lat), labeled('Longitude', lon), labeled('Label', name)]),
-    el('div.hz-dialog-foot', {}, [
-      el('button.btn.ghost', { onclick: () => dlg.close() }, 'Cancel'),
-      el('button.btn.primary', { onclick: () => {
-        const la = parseFloat(lat.value), lo = parseFloat(lon.value);
-        if (!Number.isFinite(la) || !Number.isFinite(lo)) return;
-        saveLocation({ lat: la, lon: lo, label: name.value });
-        dlg.close(); nav.rerender();
-      } }, 'Save'),
-    ]),
-  ]);
-  document.body.append(dlg);
-  dlg.addEventListener('close', () => dlg.remove());
-  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-  dlg.showModal();
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -355,7 +324,6 @@ const ceilHour = (ms) => Math.ceil(ms / 3600000) * 3600000;
 const hourLabel = (ms) => String(new Date(ms).getHours()).padStart(2, '0');
 const hourLabelFull = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const hm = (d) => d ? hourLabelFull(d.getTime()) : '—';
-function labeled(label, control) { return el('label.fld', {}, [el('span', {}, label), control]); }
 function deadEnd(title, body, action) { return deadEndNode(title, body, action ? [el('button.btn.primary', { onclick: action.onClick }, action.label)] : []); }
 function deadEndNode(title, body, buttons) {
   return el('div.dead-end', {}, [el('h2', {}, title), el('p', {}, body), el('div.card-actions', {}, buttons)]);

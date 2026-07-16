@@ -7,8 +7,9 @@
 import { el, clear, toast } from './dom.js';
 import {
   N, STEP, azForIndex, indexForAz, setAltitudeAt, maxAltitude,
-  loadHorizon, saveHorizon, toStellarium, fromStellarium,
+  makeHorizon, toStellarium, fromStellarium,
 } from '../model/horizon.js';
+import { activeSite, saveSiteHorizon } from '../model/sites.js';
 
 // Plot geometry (SVG user units). Altitude grows upward; azimuth left→right.
 const VB = { w: 720, h: 250 };
@@ -22,8 +23,19 @@ const yOf = (alt) => M.t + (1 - alt / ALT_MAX) * PH;
 const CARDINALS = [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W'], [360, 'N']];
 
 export function renderHorizonEditor(app, state, nav) {
-  const profile = state.horizon || (state.horizon = loadHorizon());
   clear(app);
+  const site = activeSite();
+  if (!site) {
+    app.append(el('div.dead-end', {}, [
+      el('h2', {}, 'No site yet'),
+      el('p', {}, 'A horizon belongs to a site. Add one first, then draw its skyline here.'),
+      el('div.card-actions', {}, [el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites')]),
+    ]));
+    return;
+  }
+  // Edit a live copy of THIS site's horizon; every change writes back to it.
+  const profile = makeHorizon(site.horizon);
+  const persist = () => saveSiteHorizon(site.id, profile.altitudes);
 
   const svgns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgns, 'svg');
@@ -91,7 +103,7 @@ export function renderHorizonEditor(app, state, nav) {
   let dragging = null;
   function apply(i, alt) {
     setAltitudeAt(profile, i, alt);
-    saveHorizon(profile);
+    persist();
     handles[i].setAttribute('cy', yOf(profile.altitudes[i]));
     redraw();
     readout.textContent = `${azForIndex(i)}° · ${profile.altitudes[i].toFixed(0)}°`;
@@ -121,28 +133,30 @@ export function renderHorizonEditor(app, state, nav) {
     el('span.hz-max.mono', {}, ''),
   ]);
   const actions = el('div.hz-actions', {}, [
-    el('button.btn', { onclick: () => { if (confirm('Reset the horizon to a flat 0°?')) { profile.altitudes.fill(0); saveHorizon(profile); redraw(); toast('Horizon reset to flat.'); } } }, 'Reset'),
-    el('button.btn', { onclick: () => openImport(profile, redraw) }, 'Import…'),
-    el('button.btn', { onclick: () => exportStellarium(profile) }, 'Export'),
+    el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${site.name}`),
+    el('button.btn', { onclick: () => { if (confirm('Reset the horizon to a flat 0°?')) { profile.altitudes.fill(0); persist(); redraw(); toast('Horizon reset to flat.'); } } }, 'Reset'),
+    el('button.btn', { onclick: () => openImport(profile, redraw, persist) }, 'Import…'),
+    el('button.btn', { onclick: () => exportStellarium(profile, site.name) }, 'Export'),
     readout,
   ]);
 
   app.append(
     header,
-    el('p.dim.small', {}, 'Drag each point to the top of the trees or hills blocking that direction. Everything above this line is what you can actually see.'),
+    el('p.dim.small', {}, `Drag each point to the top of the trees or hills blocking that direction from ${site.name}. Everything above this line is what you can actually see.`),
     el('div.hz-wrap', {}, [svg]),
     actions,
-    el('p.settings-foot', {}, 'Saved on this device. Sensor-traced capture and per-site profiles arrive in later steps.'),
+    el('p.settings-foot', {}, 'Saved to this site. Sensor-traced capture is on the roadmap.'),
   );
   redraw();
 }
 
-function exportStellarium(profile) {
+function exportStellarium(profile, siteName) {
   const text = toStellarium(profile);
   try {
+    const slug = (siteName || 'horizon').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'horizon';
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    const a = el('a', { href: url, download: 'horizon.txt' });
+    const a = el('a', { href: url, download: `horizon-${slug}.txt` });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Exported horizon.txt (Stellarium format).');
@@ -151,7 +165,7 @@ function exportStellarium(profile) {
   }
 }
 
-function openImport(profile, redraw) {
+function openImport(profile, redraw, persist) {
   document.querySelector('.hz-dialog')?.remove();
   const ta = el('textarea.hz-import', { placeholder: 'Paste a Stellarium horizon list:\n0 12\n90 5\n180 20\n…', rows: 8 });
   const file = el('input', { type: 'file', accept: '.txt,text/plain', onchange: async (e) => {
@@ -168,7 +182,7 @@ function openImport(profile, redraw) {
         try {
           const imported = fromStellarium(ta.value);
           Object.assign(profile, imported);
-          saveHorizon(profile); redraw(); dlg.close();
+          persist(); redraw(); dlg.close();
           toast('Horizon imported.');
         } catch { toast('Could not parse that — expected “azimuth altitude” lines.'); }
       } }, 'Import'),

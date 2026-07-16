@@ -267,3 +267,23 @@ a { color: var(--accent); }
 .vis-eff-label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); }
 .vis-eff-win { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent-ink); }
 .vis-none { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+/* ── Sites manager ───────────────────────────────────────────────────────── */
+.sites-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.site-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.site-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.site-row.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.site-main { flex: 1 1 auto; min-width: 0; text-align: left; background: none; border: 0;
+  color: var(--ink); cursor: pointer; padding: 4px 0; }
+.site-name { display: flex; align-items: baseline; gap: 8px; font-weight: 600; }
+.site-active { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  color: #12131c; background: var(--accent); border-radius: 999px; padding: 2px 8px; }
+.site-meta { font-size: 12px; color: var(--dim); margin-top: 1px; }
+.site-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.btn.small.danger { border-color: var(--danger-dim); color: var(--danger); background: none; }
+
+/* Header action rows kept clear of the floating corner buttons. */
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.ng-site { margin-left: auto; }
+.hz-actions .ng-site { margin-left: 0; }

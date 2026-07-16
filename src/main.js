@@ -1,10 +1,7 @@
 // =============================================================================
-// Horizon Planner — app bootstrap, state, hash routing.
-//
-// v1 scaffold: proves the shell (routing + tabs + theme + SW) with placeholder
-// views. Each tab's real content arrives in the build-order steps that follow
-// (astro model, catalog/instruments, horizon editor, night graph, visibility,
-// sites).
+// Horizon Planner — app bootstrap, state, hash routing. Five live tabs:
+// Tonight (night graph + visibility), Targets (catalog), Horizon (editor),
+// Sites (manager), Settings (instrument switcher).
 // =============================================================================
 import { el } from './ui/dom.js';
 import { mountAbout } from './ui/about.js';
@@ -13,6 +10,7 @@ import { renderTargets } from './ui/targets.js';
 import { renderSettings } from './ui/settings.js';
 import { renderHorizonEditor } from './ui/horizoneditor.js';
 import { renderTonight } from './ui/nightgraph.js';
+import { renderSites } from './ui/sites.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -57,31 +55,15 @@ function renderTabs() {
     }, [el('span.tab-icon', { html: t.icon }), el('span.tab-label', {}, t.label)])));
 }
 
-// Placeholder view — each tab shows what will live here, so the empty shell is
-// honest about being a scaffold rather than a blank screen.
-function placeholder(title, blurb) {
-  return el('div.placeholder', {}, [
-    el('h1', {}, title),
-    el('p.dim', {}, blurb),
-    el('p.scaffold-note', {}, 'Coming soon — this screen is part of the v1 build order.'),
-  ]);
-}
-
-// Placeholder screens for the tabs whose features land in later build-order
-// steps (night graph, horizon editor, sites manager).
-// Sites is the last remaining placeholder (Step 7).
-const sitesPlaceholder = () => placeholder('Sites',
-  'Your named observing sites — each with its own coordinates and horizon profile — plus a switcher and JSON export/import.');
-
 function render() {
   const h = location.hash || '#/';
   renderTabs();
   window.scrollTo(0, 0);
-  // Live views own their async rendering into `app`.
+  // Live views own their rendering into `app`.
   if (h.startsWith('#/targets')) return renderTargets(app, state, nav);
   if (h.startsWith('#/horizon')) return renderHorizonEditor(app, state, nav);
+  if (h.startsWith('#/sites')) return renderSites(app, state, nav);
   if (h.startsWith('#/settings')) return renderSettings(app, state, nav);
-  if (h.startsWith('#/sites')) return app.replaceChildren(sitesPlaceholder());
   return renderTonight(app, state, nav); // '#/' and anything else
 }
 
