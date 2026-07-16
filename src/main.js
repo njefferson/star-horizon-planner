@@ -11,6 +11,7 @@ import { mountAbout } from './ui/about.js';
 import { mountThemeToggle } from './ui/theme.js';
 import { renderTargets } from './ui/targets.js';
 import { renderSettings } from './ui/settings.js';
+import { renderHorizonEditor } from './ui/horizoneditor.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -70,8 +71,6 @@ function placeholder(title, blurb) {
 const PLACEHOLDERS = {
   '#/': () => placeholder('Tonight',
     'The night graph: altitude-vs-time curves for your selected targets, cut by YOUR measured horizon, with twilight bands and sun/moon markers.'),
-  '#/horizon': () => placeholder('Horizon',
-    'Your custom horizon profile: a 36-row (10° azimuth) altitude table you drag to match the real treeline, with Stellarium import/export.'),
   '#/sites': () => placeholder('Sites',
     'Your named observing sites — each with its own coordinates and horizon profile — plus a switcher and JSON export/import.'),
 };
@@ -82,6 +81,7 @@ function render() {
   window.scrollTo(0, 0);
   // Live views own their async rendering into `app`; placeholders are synchronous.
   if (h.startsWith('#/targets')) return renderTargets(app, state, nav);
+  if (h.startsWith('#/horizon')) return renderHorizonEditor(app, state, nav);
   if (h.startsWith('#/settings')) return renderSettings(app, state, nav);
   const view = PLACEHOLDERS[h] || PLACEHOLDERS['#/'];
   app.replaceChildren(view());
