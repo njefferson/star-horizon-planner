@@ -1,0 +1,23 @@
+# Headless checks on every push / PR: the Node unit tests and the catalog
+# validate gate. No build step (no-build vanilla ES modules); no network — the
+# committed catalog.json is validated as-is.
+name: CI
+
+on:
+  push:
+    branches: [ main, staging ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test
+      - name: Validate bundled catalog
+        run: node scripts/build-catalog.mjs validate
