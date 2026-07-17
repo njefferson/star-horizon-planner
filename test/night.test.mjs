@@ -1,4 +1,4 @@
-// Headless unit tests for model/night.js and model/location.js.
+// Headless unit tests for model/night.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -9,7 +9,6 @@ globalThis.localStorage = (() => {
 
 const { makeObserver } = await import('../src/model/astro.js');
 const { nightWindow, sampleTwilight, darkestAltitude } = await import('../src/model/night.js');
-const { loadLocation, saveLocation, clearLocation } = await import('../src/model/location.js');
 
 const obs = makeObserver(37.5, -122.0, 0);
 const DATE = new Date('2026-03-20T12:00:00Z');
@@ -48,16 +47,5 @@ test('nightWindow falls back to a fixed polar-day window', () => {
   assert.ok(w.start.getTime() < w.end.getTime());
 });
 
-test('location store round-trips, clamps latitude and wraps longitude', () => {
-  clearLocation();
-  assert.equal(loadLocation(), null);
-  saveLocation({ lat: 37.5, lon: -122, label: '  Backyard  ' });
-  const l = loadLocation();
-  assert.equal(l.lat, 37.5);
-  assert.equal(l.lon, -122);
-  assert.equal(l.label, 'Backyard');           // trimmed
-  assert.equal(saveLocation({ lat: 120, lon: 400 }).lat, 90);   // clamped
-  assert.equal(saveLocation({ lat: 0, lon: 400 }).lon, 40);     // wrapped 400→40
-  clearLocation();
-  assert.equal(loadLocation(), null);
-});
+// (The legacy single-location store was absorbed by sites.js in v1.1; its
+// clamp/wrap behaviour lives on in sites.test.mjs.)

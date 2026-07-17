@@ -10,7 +10,18 @@ import {
   exportBundle, importBundle,
 } from '../model/sites.js';
 import { makeHorizon, maxAltitude, isFlat } from '../model/horizon.js';
-import { requestGeolocation } from '../model/location.js';
+
+/** Prompt the device for its position (opt-in). Resolves to {lat,lon} or null. */
+function requestGeolocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { maximumAge: 600000, timeout: 8000 },
+    );
+  });
+}
 
 export function renderSites(app, state, nav) {
   clear(app);

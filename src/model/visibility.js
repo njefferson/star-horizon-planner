@@ -5,8 +5,9 @@
 //   • effective  — above YOUR measured treeline AND below the mount's near-
 //                  zenith dead-zone (an alt-az smart scope can't track through
 //                  the zenith; EQ mode relaxes it). This is the emphasised one.
-// Returns merged intervals with edge times refined by interpolation, plus the
-// transit altitude/time. Headless-testable; the table lives in the UI.
+// Returns merged intervals (edges refined to the midpoint of the bracketing
+// samples, so within ±step/2 of the true crossing), plus the transit
+// altitude/time. Headless-testable; the table lives in the UI.
 // =============================================================================
 import { altAz } from './astro.js';
 import { isAbove } from './horizon.js';
@@ -54,8 +55,9 @@ export function visibility(target, observer, horizon, opts) {
   };
 }
 
-// Merge contiguous true-runs of `key` into intervals, refining each edge to the
-// linear-interpolated crossing time between the two bracketing samples so the
+// Merge contiguous true-runs of `key` into intervals. Each edge is refined to
+// the MIDPOINT of the two bracketing samples — within ±step/2 (±1 min at the
+// default cadence) of the true crossing, without a second solver pass — so the
 // window boundaries read cleanly rather than snapping to the sample grid.
 function intervals(samples, key) {
   const out = [];
