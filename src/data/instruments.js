@@ -10,12 +10,14 @@
 //     fov?: { w_deg, h_deg },              // optional override; else computed
 //     mount: { altAz, eqCapable, zenithDeadZone_deg } }
 //
-// The Seestar S50 and S30 share the Sony IMX462 sensor (1920×1080, 2.9 µm);
-// only the focal length differs (250 mm vs 150 mm), which is exactly why the
+// The Seestar S50 carries the Sony IMX462 and the S30 the Sony IMX662 —
+// different chips with IDENTICAL 1920×1080 @ 2.9 µm geometry, so they share
+// one geometry constant below; the focal length (250 mm vs 150 mm) is why the
 // S30 frames wider. Do NOT bake FOV numbers here — let it compute.
 // =============================================================================
 
 const IMX462 = { w_px: 1920, h_px: 1080, pixel_um: 2.9 };
+const IMX662 = { ...IMX462 }; // same geometry, different (newer) chip
 
 export const PRESETS = [
   {
@@ -33,7 +35,7 @@ export const PRESETS = [
     name: 'Seestar S30',
     focalLength_mm: 150,
     aperture_mm: 30,
-    sensor: { ...IMX462 },
+    sensor: { ...IMX662 },
     mount: { altAz: true, eqCapable: true, zenithDeadZone_deg: 85 },
   },
 ];
