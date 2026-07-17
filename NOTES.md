@@ -71,8 +71,10 @@ The bird app is the structural template. Reuse near-verbatim:
 - Conventions: `horizon.*` localStorage keys with inline `try/catch`; `#/import?...`
   share-links for export/import; `:root` CSS tokens + `[data-theme="dark"]` (never
   hex-in-place); IBM Plex, mono for every number; release = SW cache version bumped
-  with the changelog; work on a `claude/*` branch → `staging` → on-device go → PR to
-  `main`.
+  with the changelog. **Branches: ONLY `staging` and `main` exist — ever** (owner's
+  standing order, 2026-07-17). Work lands on `staging` → on-device go → merge to
+  `main`; never create any other branch. (Parallel sessions must therefore pull
+  `staging` before pushing — the Step 8 collision is the cautionary tale.)
 
 The **night graph** follows the photo studio's one hand-rolled viz routine,
 `Jefferson-Photography-Studio/src/histogram.ts` (Canvas 2D, closure-based `x()/y()`
