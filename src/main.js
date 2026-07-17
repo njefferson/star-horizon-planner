@@ -12,6 +12,7 @@ import { renderHorizonEditor } from './ui/horizoneditor.js';
 import { renderTonight } from './ui/nightgraph.js';
 import { renderSites } from './ui/sites.js';
 import { renderPolar } from './ui/polar.js';
+import { renderCapture } from './ui/capture.js';
 import { loadSites, requestPersistence } from './model/sites.js';
 
 const state = {
@@ -64,6 +65,7 @@ function render() {
   window.scrollTo(0, 0);
   // Live views own their rendering into `app`.
   if (h.startsWith('#/targets')) return renderTargets(app, state, nav);
+  if (h.startsWith('#/capture')) return renderCapture(app, state, nav); // sub-view of Horizon, no tab
   if (h.startsWith('#/horizon')) return renderHorizonEditor(app, state, nav);
   if (h.startsWith('#/polar')) return renderPolar(app, state, nav);
   if (h.startsWith('#/sites')) return renderSites(app, state, nav);

@@ -132,13 +132,38 @@ await step('horizon editor: 36 handles; keyboard nudge writes through', async ()
   ok(/0° · 3°/.test(readout), `readout after 3 nudges: ${readout}`);
 });
 
-await step('horizon editor: Stellarium import resamples onto the grid', async () => {
+await step('horizon editor: Stellarium import (keeps the file\'s density)', async () => {
   await page.click('.hz-actions .btn:has-text("Import")');
   await page.fill('.hz-import', '# smoke\n0 12\n90 5\n180 20\n270 8');
   await page.click('.hz-dialog .btn.primary');
   await page.waitForSelector('.hz-dialog', { state: 'detached' });
   const max = await page.$eval('.hz-max', (e) => e.textContent);
   ok(/tallest 20°/.test(max), `tallest after import: ${max}`);
+});
+
+await step('capture: synthetic sensor sweep bins, covers the circle, saves', async () => {
+  await page.click('.hz-actions .btn:has-text("Measure")');
+  await page.waitForSelector('.cap-live');
+  await page.click('.pa-card .btn:has-text("Enable compass")');
+  await page.click('#cap-rec'); // Record (uncalibrated → raw-headings toast, offset 0)
+  // Synthetic Android sweep, one event per degree: absolute α with
+  // heading = 360 − α; an 18° south treeline over 4° open sky.
+  await page.evaluate(() => {
+    for (let heading = 0; heading < 360; heading++) {
+      const beta = heading >= 170 && heading <= 190 ? 18 : 4;
+      window.dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute', {
+        alpha: (360 - heading) % 360, beta, gamma: 0, absolute: true,
+      }));
+    }
+  });
+  await page.click('#cap-rec'); // Stop — repaints counters synchronously
+  const cov = await page.$eval('#cap-cov', (e) => e.textContent);
+  ok(/ 100% /.test(cov), `full-circle coverage: ${cov}`);
+  await shot('capture.png');
+  await page.click('.pa-card .btn:has-text("Save measured horizon")');
+  await page.waitForSelector('.hz-svg'); // lands back on the editor
+  const max = await page.$eval('.hz-max', (e) => e.textContent);
+  ok(/tallest 18°/.test(max), `captured treeline applied: ${max}`);
 });
 
 await step('targets: search the catalog and favourite M42', async () => {

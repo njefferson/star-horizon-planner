@@ -195,7 +195,9 @@ interpolation, ≥1 point), not a fixed 36-bin array:
   and polar are untouched. Sites/backups store `[[az, alt], …]` pairs; old
   backups import unchanged.
 
-**Build order (each step → staging, tests first culture):**
+**Build order (each step → staging, tests first culture) — 9a–9d BUILT,
+awaiting the on-device pass (compass accuracy/drift and sighting feel are the
+NEEDS-HIS-HANDS half; the smoke pass drives the whole flow synthetically):**
 - **9a** `model/horizon.js` v2 + `model/sites.js` storage — points model,
   legacy conversion, density-preserving Stellarium I/O, negative-alt clamp;
   rewrite horizon tests, prune the dead standalone `loadHorizon`/`saveHorizon`.
