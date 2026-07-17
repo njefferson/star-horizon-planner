@@ -25,9 +25,19 @@ const STEP_MIN = 4;               // sampling cadence for the curves
 
 // Fixed night-sky palette (the graph is a dark viz in both app themes).
 const BAND = { day: '#3a4a63', civil: '#2c3a54', nautical: '#20293f', astronomical: '#161c2e', night: '#0d1018' };
-const AXIS = '#8a93ad', GRID = 'rgba(160,170,200,.14)', MOON = '#cfd6e6', SUNMARK = '#f0a94e', INK = '#e9ecf7';
-const SERIES = ['#f0a94e', '#c39be8', '#5fae79', '#7fb0da', '#e8795a', '#e0c24e', '#5fd0c0', '#d98cc0'];
+const AXIS = '#8a93ad', GRID = 'rgba(160,170,200,.14)', MOON = '#cfd6e6';
+// Colour-blind-safe categorical order (accessibility standing order). Validated
+// against the graph surface #0d1018 with the dataviz CVD validator — PASS on
+// all five checks, worst adjacent ΔE 8.4 protan (vs the FAILING previous set:
+// 5.2 deutan, 14.9 normal). Re-run the validator before changing these:
+//   node <dataviz-skill>/scripts/validate_palette.js "<hexes>" --mode dark --surface "#0d1018"
+const SERIES = ['#3987e5', '#008300', '#d55181', '#c98500', '#199e70', '#d95926', '#9085e9', '#e66767'];
+// Identity is NEVER carried by colour alone — each series also gets a distinct
+// marker shape, drawn on the curve and mirrored in the legend, table and scrub.
+const MARKS = ['circle', 'square', 'triangle', 'diamond', 'plus', 'cross', 'downtri', 'pentagon'];
+const CASE = '#0d1018';           // dark casing stroked under bright curve runs
 const MAX_TARGETS = 8;
+const seriesMark = (i) => MARKS[i % MARKS.length];
 
 export async function renderTonight(app, state, nav) {
   clear(app);
@@ -60,7 +70,7 @@ export async function renderTonight(app, state, nav) {
   const series = targets.map((t, i) => {
     const curve = altitudeCurve({ ra: t.ra, dec: t.dec }, observer, win.start, win.end, STEP_MIN);
     return {
-      target: t, color: SERIES[i % SERIES.length],
+      target: t, color: SERIES[i % SERIES.length], mark: seriesMark(i),
       pts: curve.map((c) => ({
         ms: c.time.getTime(), alt: c.altitude,
         vis: isAbove(profile, c.azimuth, c.altitude), up: c.altitude > 0,
@@ -74,6 +84,12 @@ export async function renderTonight(app, state, nav) {
   const wrap = el('div.ng-wrap');
   const base = document.createElement('canvas'); base.className = 'ng-base';
   const over = document.createElement('canvas'); over.className = 'ng-over';
+  // The canvas is the graph; assistive tech gets a summary + a pointer to the
+  // text visibility table below, which carries the same data row by row.
+  base.setAttribute('role', 'img');
+  base.setAttribute('aria-label',
+    `Altitude-versus-time graph for ${targets.map((t) => shortName(t)).join(', ')}, cut by your measured horizon. The visibility table below lists each target's windows in text.`);
+  over.setAttribute('aria-hidden', 'true');
   wrap.append(base, over);
   const readout = el('div.ng-readout', {}, hintText(profile));
   const legend = buildLegend(series, moonNow);
@@ -158,14 +174,95 @@ function drawBase(ctx, s, { twilight, series, moonPts }) {
   ctx.setLineDash([]);
 
   // Target curves: faint where up-but-blocked, bright where above the horizon.
+  // A dark casing under the bright run keeps every colour legible across all
+  // twilight bands, and a marker shape carries identity without colour.
+  const labelPeaks = series.length <= 4; // direct labels only when uncluttered
   for (const ser of series) {
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.32; ctx.strokeStyle = ser.color;
-    strokeCurve(ctx, s, ser.pts, true);         // full up-portion, faint
+    ctx.globalAlpha = 0.32; ctx.strokeStyle = ser.color; ctx.lineWidth = 2;
+    strokeCurve(ctx, s, ser.pts, true);          // full up-portion, faint
     ctx.globalAlpha = 1;
+    ctx.strokeStyle = CASE; ctx.lineWidth = 4;
+    strokeVisible(ctx, s, ser.pts);              // casing
+    ctx.strokeStyle = ser.color; ctx.lineWidth = 2;
     strokeVisible(ctx, s, ser.pts);              // above-horizon runs, solid
+    drawMarksAlong(ctx, s, ser);                 // shape markers on the visible run
+    if (labelPeaks) drawPeakLabel(ctx, s, ser);
   }
   ctx.globalAlpha = 1;
+}
+
+// Place the series' marker shape along its visible run, ~every 45 min, plus one
+// at the peak. Markers are the colour-independent identity channel.
+function drawMarksAlong(ctx, s, ser) {
+  const vis = ser.pts.filter((p) => p.vis);
+  if (!vis.length) return;
+  const stepMs = 45 * 60000;
+  let nextAt = vis[0].ms, peak = vis[0];
+  for (const p of vis) {
+    if (p.alt > peak.alt) peak = p;
+    if (p.ms >= nextAt) { drawMark(ctx, ser.mark, s.x(p.ms), s.y(p.alt), 4, ser.color); nextAt = p.ms + stepMs; }
+  }
+  drawMark(ctx, ser.mark, s.x(peak.ms), s.y(peak.alt), 4.5, ser.color);
+}
+
+function drawPeakLabel(ctx, s, ser) {
+  const vis = ser.pts.filter((p) => p.vis);
+  if (!vis.length) return;
+  const peak = vis.reduce((a, b) => (b.alt > a.alt ? b : a), vis[0]);
+  const label = shortName(ser.target);
+  ctx.font = '600 11px ' + LABEL_FONT; ctx.textBaseline = 'bottom';
+  // Keep the label inside the plot: left/right-align near the edges so it
+  // never clips off the canvas.
+  const half = ctx.measureText(label).width / 2;
+  const x = peak.ms, px = s.x(x);
+  ctx.textAlign = px - half < M.l ? 'left' : px + half > s.W - M.r ? 'right' : 'center';
+  const lx = ctx.textAlign === 'left' ? M.l : ctx.textAlign === 'right' ? s.W - M.r : px;
+  const y = s.y(peak.alt) - 9;
+  ctx.lineWidth = 3; ctx.strokeStyle = CASE; ctx.strokeText(label, lx, y); // casing for legibility
+  ctx.fillStyle = ser.color; ctx.fillText(label, lx, y);
+}
+const LABEL_FONT = "'IBM Plex Sans', system-ui, sans-serif";
+
+// Draw one marker shape centred at (x,y). Shapes are visually distinct at r≈4.
+function drawMark(ctx, shape, x, y, r, color) {
+  ctx.save();
+  ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  ctx.beginPath();
+  switch (shape) {
+    case 'square': ctx.rect(x - r, y - r, 2 * r, 2 * r); ctx.fill(); break;
+    case 'triangle': ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r); ctx.lineTo(x - r, y + r); ctx.closePath(); ctx.fill(); break;
+    case 'downtri': ctx.moveTo(x, y + r); ctx.lineTo(x + r, y - r); ctx.lineTo(x - r, y - r); ctx.closePath(); ctx.fill(); break;
+    case 'diamond': ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); break;
+    case 'plus': ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke(); break;
+    case 'cross': ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r); ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r); ctx.stroke(); break;
+    case 'pentagon':
+      for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * 2 * Math.PI / 5; const px = x + r * Math.cos(a), py = y + r * Math.sin(a); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.closePath(); ctx.fill(); break;
+    default: ctx.arc(x, y, r, 0, 7); ctx.fill(); // circle
+  }
+  ctx.restore();
+}
+
+// The DOM twin of drawMark — the same shape as an inline SVG for the legend,
+// visibility table and scrub readout, so identity matches the canvas exactly.
+function markSvg(shape, color) {
+  const c = 7, r = 5;
+  let inner;
+  switch (shape) {
+    case 'square': inner = `<rect x="${c - r}" y="${c - r}" width="${2 * r}" height="${2 * r}" fill="${color}"/>`; break;
+    case 'triangle': inner = `<polygon points="${c},${c - r} ${c + r},${c + r} ${c - r},${c + r}" fill="${color}"/>`; break;
+    case 'downtri': inner = `<polygon points="${c},${c + r} ${c + r},${c - r} ${c - r},${c - r}" fill="${color}"/>`; break;
+    case 'diamond': inner = `<polygon points="${c},${c - r} ${c + r},${c} ${c},${c + r} ${c - r},${c}" fill="${color}"/>`; break;
+    case 'plus': inner = `<path d="M${c - r} ${c}H${c + r}M${c} ${c - r}V${c + r}" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/>`; break;
+    case 'cross': inner = `<path d="M${c - r} ${c - r}L${c + r} ${c + r}M${c + r} ${c - r}L${c - r} ${c + r}" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/>`; break;
+    case 'pentagon': {
+      const pts = [];
+      for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * 2 * Math.PI / 5; pts.push(`${(c + r * Math.cos(a)).toFixed(1)},${(c + r * Math.sin(a)).toFixed(1)}`); }
+      inner = `<polygon points="${pts.join(' ')}" fill="${color}"/>`; break;
+    }
+    default: inner = `<circle cx="${c}" cy="${c}" r="${r}" fill="${color}"/>`;
+  }
+  return el('span.ng-mark', { html: `<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">${inner}</svg>` });
 }
 
 // Stroke a curve through samples with alt>0 (breaking where it sets).
@@ -201,13 +298,13 @@ function drawScrub(ctx, s, ms, series, profile, observer, readout) {
   for (const ser of series) {
     const p = nearest(ser.pts, ms);
     if (!p) continue;
-    if (p.up) { ctx.fillStyle = ser.color; ctx.beginPath(); ctx.arc(x, s.y(p.alt), 3.5, 0, 7); ctx.fill(); }
-    rows.push({ color: ser.color, name: shortName(ser.target), alt: p.alt, vis: p.vis, up: p.up });
+    if (p.up) drawMark(ctx, ser.mark, x, s.y(p.alt), 4.5, ser.color);
+    rows.push({ color: ser.color, mark: ser.mark, name: shortName(ser.target), alt: p.alt, vis: p.vis, up: p.up });
   }
   readout.replaceChildren(
     el('div.ng-ro-time', {}, hourLabelFull(ms)),
     ...rows.map((r) => el('div.ng-ro-row', {}, [
-      el('span.ng-ro-dot', { style: `background:${r.color}` }),
+      markSvg(r.mark, r.color),
       el('span.ng-ro-name', {}, r.name),
       el('span.ng-ro-alt', {}, r.up ? `${r.alt.toFixed(0)}°` : 'down'),
       el('span.ng-ro-flag', { class: r.up && r.vis ? 'ok' : 'no' },
@@ -234,11 +331,11 @@ function header(state, nav, site, shown, favCount) {
 function buildLegend(series, moonNow) {
   return el('div.ng-legend', {}, [
     ...series.map((s) => el('span.ng-leg', {}, [
-      el('span.ng-leg-dot', { style: `background:${s.color}` }),
+      markSvg(s.mark, s.color),
       el('span', {}, shortName(s.target)),
     ])),
     el('span.ng-leg', {}, [
-      el('span.ng-leg-dot.moon', {}, ''),
+      el('span.ng-leg-dot.moon', { 'aria-hidden': 'true' }, ''),
       el('span', {}, `Moon · ${moonNow.phaseName} ${Math.round(moonNow.illumination * 100)}%`),
     ]),
   ]);
@@ -277,8 +374,8 @@ function visibilitySection(series, observer, profile, win, instrument) {
         title: `Moon ${Math.round(mi.illumination * 100)}% lit, ${Math.round(sep)}° from this target at ${hm(ref)}`,
       }, [el('span', { 'aria-hidden': 'true' }, '☾ '), `${Math.round(sep)}°${washed ? ' · close' : ''}`]);
     }
-    return el('div.vis-row', {}, [
-      el('span.vis-dot', { style: `background:${s.color}` }),
+    return el('li.vis-row', {}, [
+      markSvg(s.mark, s.color),
       el('div.vis-main', {}, [
         el('div.vis-name', {}, shortName(s.target)),
         el('div.vis-sub', {}, [
@@ -296,7 +393,7 @@ function visibilitySection(series, observer, profile, win, instrument) {
   return el('section.vis-section', {}, [
     el('h2', {}, 'Visibility tonight'),
     el('p.dim.small', {}, 'Effective windows are when each target clears your treeline and stays below the mount’s zenith dead-zone — the times you can actually shoot it. ☾ is the Moon’s distance from the target while the Moon is up, flagged when close and bright.'),
-    el('div.vis-list', {}, rows),
+    el('ul.vis-list', {}, rows),
   ]);
 }
 const fmtIv = (iv) => `${hm(iv.start)}–${hm(iv.end)}`;

@@ -172,7 +172,10 @@ function sweepCard() {
       el('button.btn', { onclick: resetSweep }, 'Reset sweep'),
     ]),
     el('p.small.mono', { id: 'cap-cov' }, covText()),
-    el('div.cap-cover', { id: 'cap-strip' }, coverStrip()),
+    // The numeric coverage above is the real signal; the strip is a glance-aid,
+    // so hide it from assistive tech and give filled segments a height + inset
+    // difference (not just colour) per the accessibility standing order.
+    el('div.cap-cover', { id: 'cap-strip', 'aria-hidden': 'true' }, coverStrip()),
   ]);
 }
 
