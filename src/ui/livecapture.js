@@ -63,7 +63,7 @@ export function renderLiveCapture(app, state, nav) {
   const site = activeSite();
   if (!site) {
     app.append(
-      el('h1', {}, 'Live camera horizon'),
+      el('h1', {}, 'Live camera'),
       el('div.dead-end', {}, [
         el('h2', {}, 'No site yet'),
         el('p', {}, 'A measured horizon belongs to a site. Add one first.'),
@@ -89,9 +89,14 @@ export function renderLiveCapture(app, state, nav) {
   ]);
 
   const controls = el('div.lc-controls', {}, [
+    // iOS gates motion/compass behind a permission prompt that MUST fire from a
+    // tap — so it can't be auto-granted on navigation. This button provides that
+    // tap; it hides itself once compass data flows (and on platforms that don't
+    // gate, where orientation is attached immediately).
+    el('button.btn.primary.block', { id: 'lc-motion', hidden: true, onclick: enableMotion, 'aria-label': 'Enable compass and tilt' }, '🧭 Enable compass'),
     el('div.lc-btns', {}, [
       el('button.btn.primary', { id: 'lc-rec', onclick: toggleRecording, 'aria-label': 'Record sweep' }, '● Record'),
-      el('button.btn', { id: 'lc-mark', onclick: markPoint, 'aria-label': 'Mark a point at the reticle' }, '＋ Mark point'),
+      el('button.btn', { id: 'lc-mark', onclick: markPoint, 'aria-label': 'Mark a point at the reticle' }, '＋ Mark'),
       el('button.btn', { onclick: () => nudgeReticle(2), 'aria-label': 'Move reticle up 2 degrees' }, '▲'),
       el('button.btn', { onclick: () => nudgeReticle(-2), 'aria-label': 'Move reticle down 2 degrees' }, '▼'),
     ]),
@@ -99,7 +104,7 @@ export function renderLiveCapture(app, state, nav) {
       el('button.btn', { onclick: () => calibrateFromSun(site), 'aria-label': 'Calibrate by sighting the Sun' }, '☀ Calibrate'),
       el('button.btn', { onclick: resetSweep }, 'Reset'),
       el('button.btn.primary', { onclick: () => save(site, nav) }, 'Save'),
-      el('button.btn', { onclick: () => { stopLive(); nav.go('#/capture'); }, 'aria-label': 'Switch to no-camera sensor capture' }, 'No-camera mode'),
+      el('button.btn', { onclick: () => { stopLive(); nav.go('#/capture'); }, 'aria-label': 'Switch to no-camera sensor capture' }, 'No camera'),
     ]),
     el('p.small.mono', { id: 'lc-cov' }, covText()),
     el('p.dim.small', {}, 'Point the back camera at the treeline and spin slowly; the horizon draws on the sky. Nudge the reticle up to a treetop above you, then Mark — or Record and sweep continuously. Camera off? Use no-camera mode or the Horizon editor.'),
@@ -116,7 +121,7 @@ export function renderLiveCapture(app, state, nav) {
 
   root.append(
     el('div.pa-head', {}, [
-      el('h1', {}, 'Live camera horizon'),
+      el('h1', {}, 'Live camera'),
       el('div.row-actions', {}, [el('button.chip.ng-site', { onclick: () => { stopLive(); nav.go('#/sites'); }, 'aria-label': `Site: ${site.name} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${site.name}`)])]),
     ]),
@@ -126,9 +131,34 @@ export function renderLiveCapture(app, state, nav) {
   app.append(root);
 
   startCamera(video, canvas);
-  attachOrientation();
+  // Platforms that don't gate motion (Android/desktop) attach immediately;
+  // iOS waits for the Enable-compass tap so requestPermission() has a gesture.
+  if (motionIsGated()) showMotionButton(true);
+  else attachOrientation();
   // Stop the camera the instant we navigate away (no unmount hook otherwise).
   window.addEventListener('hashchange', onHashLeave);
+}
+
+function motionIsGated() {
+  return typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof DeviceOrientationEvent.requestPermission === 'function';
+}
+function showMotionButton(show) {
+  const b = root && root.querySelector('#lc-motion');
+  if (b) b.hidden = !show;
+}
+
+// iOS: request motion/compass permission from this tap, then start listening.
+async function enableMotion() {
+  try {
+    if (motionIsGated()) {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== 'granted') { toast('Compass permission was denied — you can still Mark points or use no-camera mode.'); return; }
+    }
+  } catch { toast('Could not request compass access here.'); return; }
+  attachOrientation();
+  showMotionButton(false);
+  say('Compass on — spin slowly to trace your horizon.');
 }
 
 // --- camera ------------------------------------------------------------------
@@ -170,12 +200,15 @@ function sizeCanvas(canvas, video) {
 
 // --- orientation (same pipeline as ui/capture.js) ----------------------------
 function attachOrientation() {
+  if (!lc || lc.oriAttached) return; // idempotent — enableMotion may be tapped twice
   if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', onOrientation);
   window.addEventListener('deviceorientation', onOrientation);
+  lc.oriAttached = true;
 }
 function detachOrientation() {
   window.removeEventListener('deviceorientationabsolute', onOrientation);
   window.removeEventListener('deviceorientation', onOrientation);
+  if (lc) lc.oriAttached = false;
 }
 
 function onOrientation(e) {
@@ -301,7 +334,10 @@ function tickDraw(canvas) {
 function updateReadout() {
   const r = root.querySelector('#lc-readout');
   if (!r) return;
-  if (!lc.cam) { r.textContent = 'waiting for compass…'; return; }
+  if (!lc.cam) {
+    r.textContent = (motionIsGated() && !lc.oriAttached) ? 'tap “Enable compass”' : 'waiting for compass…';
+    return;
+  }
   const markAlt = altitudeAtScreenY(lc.reticleY, lc.cam.alt, lc.fov.vfov);
   const cal = lc.calibrated ? '' : ' · uncalibrated';
   r.textContent = `az ${lc.cam.az.toFixed(0)}° · reticle ${markAlt.toFixed(0)}° alt${cal}`;

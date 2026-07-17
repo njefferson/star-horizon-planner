@@ -16,6 +16,7 @@ import { renderCapture } from './ui/capture.js';
 import { renderLiveCapture } from './ui/livecapture.js';
 import { renderTargetDetail } from './ui/targetdetail.js';
 import { loadSites, requestPersistence, ensureDefaultSite } from './model/sites.js';
+import { maybeWelcome } from './ui/location.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -125,6 +126,8 @@ window.addEventListener('hashchange', () => render(true));
   ensureDefaultSite(); // always have an active site → open into the sky, not a wall
   render();
   booted = true;       // subsequent navigations move focus to the view heading
+  maybeWelcome(nav);   // first run: explain the app and get a real location
+
   // Existing data (sites/horizons predating this call) deserves protection
   // from storage eviction too — new writes re-request it in model/sites.js.
   if (loadSites().length) requestPersistence();

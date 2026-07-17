@@ -104,11 +104,25 @@ await step('boot: 6 tabs, Tonight opens into the sky at the seeded default site'
   ok(rows === 1, `all tabs on one dock row (got ${rows} rows)`);
   // Exactly one tab marks itself the current page for assistive tech.
   ok(await page.$$eval('.tab[aria-current="page"]', (e) => e.length) === 1, 'active tab has aria-current="page"');
-  // No create-a-site wall: a default "Here" site is seeded so Tonight shows the
-  // sky right away, with a one-tap "Use my location" nudge (location is approx).
+  // First run shows a welcome that asks for a location; dismiss it.
+  await page.waitForSelector('.welcome-dialog');
+  ok(/where are you|find your sky/i.test(await page.$eval('.welcome-dialog', (e) => e.textContent)), 'first-run welcome prompts for location');
+  await page.click('.welcome-dialog .btn.ghost'); // Not now
+  await page.waitForSelector('.welcome-dialog', { state: 'detached' });
+  // No create-a-site wall: a placeholder site is seeded so Tonight shows the sky
+  // right away, with one-tap geolocation AND a city/ZIP search (location approx).
   await page.waitForSelector('.ng-approx');
-  ok(/use my location/i.test(await page.$eval('.ng-approx', (e) => e.textContent)), 'approx-location nudge offers one-tap geolocation');
+  ok(/use my location/i.test(await page.$eval('.ng-approx', (e) => e.textContent)), 'approx-location nudge offers geolocation');
+  ok(/city or zip/i.test(await page.$eval('.ng-approx', (e) => e.textContent)), 'approx-location nudge offers a city/ZIP search');
   ok(!(await page.$('.dead-end')), 'Tonight is not a dead-end on first run');
+});
+
+await step('location: the city/ZIP search dialog opens from the Tonight nudge', async () => {
+  await page.click('.ng-approx .btn:has-text("City or ZIP")');
+  await page.waitForSelector('.loc-dialog input');
+  ok(/find your location/i.test(await page.$eval('.loc-dialog h2', (e) => e.textContent)), 'geocode search dialog opens');
+  await page.click('.loc-dialog .btn.ghost'); // Cancel (live geocoding needs network)
+  await page.waitForSelector('.loc-dialog', { state: 'detached' });
 });
 
 await step('horizon: the seeded site opens the editor (no create-a-site wall)', async () => {
@@ -369,6 +383,24 @@ await step('no view overflows the page width at phone size (iPhone 12/13/14)', a
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     ok(over <= 1, `${label} overflows by ${over}px at 390px wide`);
   }
+  // Capture views aren't in the tab loop. html{overflow-x:hidden} hides a real
+  // overflow from scrollWidth, so probe actual element right-edges instead.
+  await page.evaluate(() => {
+    if (!navigator.mediaDevices) Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
+    navigator.mediaDevices.getUserMedia = async () => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; return c.captureStream(1); };
+  });
+  const edgeOver = () => page.evaluate(() => {
+    let max = 0;
+    for (const el of document.querySelectorAll('#app, #app *')) max = Math.max(max, Math.ceil(el.getBoundingClientRect().right));
+    return max - window.innerWidth;
+  });
+  for (const [label, hash] of [['Capture', '#/capture'], ['Live capture', '#/capture/live']]) {
+    await page.evaluate((h) => { location.hash = h; }, hash);
+    await page.waitForTimeout(200);
+    const over = await edgeOver();
+    ok(over <= 1, `${label} overflows by ${over}px at 390px wide`);
+  }
+  await page.evaluate(() => { location.hash = '#/'; });
   await page.setViewportSize({ width: 900, height: 900 });
 });
 

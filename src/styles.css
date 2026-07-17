@@ -387,7 +387,10 @@ a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.
 #cap-rec.rec { background: var(--live); border-color: var(--live); color: #fff; }
 
 /* ── Live-camera AR capture ──────────────────────────────────────────────── */
-.lc-root { display: flex; flex-direction: column; }
+.lc-root { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
+.lc-controls { min-width: 0; max-width: 100%; }
+.lc-btns { min-width: 0; }
+.lc-btns .btn { min-width: 0; }
 /* The viewfinder: video fills it, the overlay canvas + text scrims sit over. */
 .lc-stage { position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: 62vh;
   margin: 6px 0 12px; border-radius: var(--r); overflow: hidden; background: #000;
@@ -399,7 +402,8 @@ a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.
 .lc-reticle-focus { background: transparent; }
 .lc-reticle-focus:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
 /* Text over the camera image carries its own dark scrim so it reads on any sky. */
-.lc-readout { position: absolute; left: 10px; top: 10px; z-index: 2;
+.lc-readout { position: absolute; left: 10px; top: 10px; z-index: 2; max-width: calc(100% - 20px);
+  box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 5px 9px; border-radius: 8px; font-size: 15px; font-weight: 600;
   color: #fff; background: rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
 .lc-hint { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 2;
@@ -416,6 +420,17 @@ a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.
   .lc-reticle-focus:focus-visible { outline: 3px solid Highlight; }
   .lc-readout, .lc-hint { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
 }
+
+/* ── Location search + welcome ───────────────────────────────────────────── */
+.geo-row { display: flex; gap: 8px; align-items: stretch; margin: 6px 0; }
+.geo-row .loc-in { flex: 1 1 auto; min-width: 0; }
+.geo-results { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+  max-height: 44vh; overflow-y: auto; }
+.geo-hit { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%; text-align: left; }
+.geo-name { font-weight: 600; }
+.welcome-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.btn.block { text-align: center; }
+.loc-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Header action rows kept clear of the floating corner buttons. */
 .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }

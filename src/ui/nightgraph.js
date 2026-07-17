@@ -9,32 +9,17 @@
 // Two stacked canvases: a base (bands/grid/curves, repainted on data change)
 // and a light overlay (just the scrub cursor) so scrubbing stays cheap.
 // =============================================================================
-import { el, clear, toast } from './dom.js';
+import { el, clear } from './dom.js';
 import { makeObserver, altitudeCurve, moonAltAz, moonInfo, moonSeparation } from '../model/astro.js';
 import { makeHorizon, isAbove, isFlat } from '../model/horizon.js';
 import { visibility, visibleTonight } from '../model/visibility.js';
 import { activeInstrument } from '../model/instruments.js';
 import { loadCatalog, favoriteIds, shortName } from '../model/catalog.js';
-import { activeSite, updateSite } from '../model/sites.js';
+import { activeSite } from '../model/sites.js';
 import { nightWindow, darkWindow, sampleTwilight } from '../model/night.js';
+import { useMyLocation, openLocationSearch } from './location.js';
 
 const HIGHLIGHTS = 6; // brightest targets to preview when nothing is favourited yet
-
-/** One-tap geolocation → update the active site in place, then repaint. */
-function useMyLocation(nav) {
-  if (!navigator.geolocation) { toast('Location isn’t available on this device — set it in Sites.'); return; }
-  toast('Locating…');
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const s = activeSite();
-      if (s) updateSite(s.id, { lat: pos.coords.latitude, lon: pos.coords.longitude, approx: false, name: s.approx ? 'Here' : s.name });
-      toast('Location set — showing your sky.');
-      nav.rerender();
-    },
-    () => toast('Location permission denied — you can type coordinates in Sites.'),
-    { maximumAge: 600000, timeout: 8000 },
-  );
-}
 
 const H = 320;                    // graph height, CSS px
 const M = { l: 32, r: 12, t: 12, b: 24 };
@@ -390,8 +375,9 @@ function header(state, nav, site, shown, favCount, previewing) {
     // Approximate seeded location → make setting the real one a one-tap job,
     // right here, instead of a trip into Sites and a lat/long form.
     site.approx ? el('div.ng-approx', { role: 'status' }, [
-      el('span.dim.small', {}, 'Approximate location. For your real sky:'),
+      el('span.dim.small', {}, 'Placeholder location. For your real sky:'),
       el('button.btn.small.primary', { onclick: () => useMyLocation(nav) }, '📍 Use my location'),
+      el('button.btn.small', { onclick: () => openLocationSearch(nav) }, '🔎 City or ZIP'),
     ]) : null,
     previewing
       ? el('p.dim.small', {}, ['Tonight’s brightest showpieces above your horizon. ',

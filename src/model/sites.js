@@ -62,7 +62,8 @@ export const DEFAULT_COORDS = { lat: 39.83, lon: -98.58 };
  */
 export function ensureDefaultSite() {
   if (loadSites().length) return activeSite();
-  const s = addSite({ name: 'Here', lat: DEFAULT_COORDS.lat, lon: DEFAULT_COORDS.lon, approx: true });
+  // A clearly-fake placeholder name so nobody mistakes it for their real spot.
+  const s = addSite({ name: 'Somewhere, USA', lat: DEFAULT_COORDS.lat, lon: DEFAULT_COORDS.lon, approx: true });
   setActiveSite(s.id);
   return s;
 }

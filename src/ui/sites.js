@@ -10,6 +10,7 @@ import {
   exportBundle, importBundle,
 } from '../model/sites.js';
 import { makeHorizon, maxAltitude, isFlat } from '../model/horizon.js';
+import { openLocationSearch } from './location.js';
 
 /** Prompt the device for its position (opt-in). Resolves to {lat,lon} or null. */
 function requestGeolocation() {
@@ -94,12 +95,18 @@ function openSiteForm(nav, site = null) {
     if (l) { lat.value = l.lat.toFixed(4); lon.value = l.lon.toFixed(4); }
     else toast('Location unavailable.');
   } }, 'Use my location');
+  // Type a city/state/ZIP → fills the name + coordinates (no lat/long needed).
+  const findBtn = el('button.btn.small', { onclick: () => openLocationSearch(nav, { onPicked: (p) => {
+    if (!name.value.trim()) name.value = p.label || p.name;
+    lat.value = p.lat.toFixed(4); lon.value = p.lon.toFixed(4);
+    toast(`Filled ${p.label}.`);
+  } }) }, '🔎 Find by city / ZIP');
 
   const dlg = el('dialog.loc-dialog', { 'aria-labelledby': 'site-form-title' }, [
     el('h2', { id: 'site-form-title' }, site ? 'Edit site' : 'Add site'),
     el('div.loc-grid', {}, [
       labeled('Name', name), labeled('Latitude', lat), labeled('Longitude', lon),
-      el('div', {}, geoBtn),
+      el('div.loc-btns', {}, [findBtn, geoBtn]),
     ]),
     el('div.hz-dialog-foot', {}, [
       el('button.btn.ghost', { onclick: () => dlg.close() }, 'Cancel'),
