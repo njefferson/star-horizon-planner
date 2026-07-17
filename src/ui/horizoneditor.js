@@ -6,7 +6,7 @@
 // =============================================================================
 import { el, clear, toast } from './dom.js';
 import {
-  N, STEP, azForIndex, indexForAz, setAltitudeAt, maxAltitude,
+  N, azForIndex, indexForAz, setAltitudeAt, sampleAt, maxAltitude,
   makeHorizon, toStellarium, fromStellarium,
 } from '../model/horizon.js';
 import { activeSite, saveSiteHorizon } from '../model/sites.js';
@@ -35,7 +35,7 @@ export function renderHorizonEditor(app, state, nav) {
   }
   // Edit a live copy of THIS site's horizon; every change writes back to it.
   const profile = makeHorizon(site.horizon);
-  const persist = () => saveSiteHorizon(site.id, profile.altitudes);
+  const persist = () => saveSiteHorizon(site.id, profile);
 
   const svgns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgns, 'svg');
@@ -72,16 +72,19 @@ export function renderHorizonEditor(app, state, nav) {
   const readout = el('span.hz-readout', {}, '');
 
   function redraw() {
+    // The curve samples the profile finely (2°) so captured/imported detail
+    // between the 36 handles is visible; below-0° stretches clip to the plot
+    // floor (the editor's drag range stays 0–90).
     let d = '';
-    for (let i = 0; i <= N; i++) {
-      const az = i * STEP, alt = profile.altitudes[i % N];
-      d += `${i ? 'L' : 'M'}${xOf(az).toFixed(1)} ${yOf(alt).toFixed(1)} `;
+    for (let az = 0; az <= 360; az += 2) {
+      const alt = Math.max(0, sampleAt(profile, az));
+      d += `${az ? 'L' : 'M'}${xOf(az).toFixed(1)} ${yOf(alt).toFixed(1)} `;
     }
     line.setAttribute('d', d);
     area.setAttribute('d', `${d}L${xOf(360).toFixed(1)} ${yOf(0)} L${xOf(0).toFixed(1)} ${yOf(0)} Z`);
     for (let i = 0; i < N; i++) {
       handles[i].setAttribute('cx', xOf(azForIndex(i)));
-      handles[i].setAttribute('cy', yOf(profile.altitudes[i]));
+      handles[i].setAttribute('cy', yOf(Math.max(0, sampleAt(profile, azForIndex(i)))));
     }
     header.querySelector('.hz-max').textContent = `tallest ${maxAltitude(profile).toFixed(0)}°`;
   }
@@ -104,9 +107,8 @@ export function renderHorizonEditor(app, state, nav) {
   function apply(i, alt) {
     setAltitudeAt(profile, i, alt);
     persist();
-    handles[i].setAttribute('cy', yOf(profile.altitudes[i]));
     redraw();
-    readout.textContent = `${azForIndex(i)}° · ${profile.altitudes[i].toFixed(0)}°`;
+    readout.textContent = `${azForIndex(i)}° · ${sampleAt(profile, azForIndex(i)).toFixed(0)}°`;
   }
   svg.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -123,8 +125,9 @@ export function renderHorizonEditor(app, state, nav) {
   svg.addEventListener('keydown', (e) => {
     const i = Number(e.target.dataset?.i);
     if (Number.isNaN(i)) return;
-    if (e.key === 'ArrowUp') { apply(i, profile.altitudes[i] + 1); e.preventDefault(); }
-    else if (e.key === 'ArrowDown') { apply(i, profile.altitudes[i] - 1); e.preventDefault(); }
+    const cur = sampleAt(profile, azForIndex(i));
+    if (e.key === 'ArrowUp') { apply(i, cur + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { apply(i, cur - 1); e.preventDefault(); }
   });
 
   // Header + actions --------------------------------------------------------
@@ -134,7 +137,7 @@ export function renderHorizonEditor(app, state, nav) {
   ]);
   const actions = el('div.hz-actions', {}, [
     el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${site.name}`),
-    el('button.btn', { onclick: () => { if (confirm('Reset the horizon to a flat 0°?')) { profile.altitudes.fill(0); persist(); redraw(); toast('Horizon reset to flat.'); } } }, 'Reset'),
+    el('button.btn', { onclick: () => { if (confirm('Reset the horizon to a flat 0°?')) { profile.points = [{ az: 0, alt: 0 }]; persist(); redraw(); toast('Horizon reset to flat.'); } } }, 'Reset'),
     el('button.btn', { onclick: () => openImport(profile, redraw, persist) }, 'Import…'),
     el('button.btn', { onclick: () => exportStellarium(profile, site.name) }, 'Export'),
     readout,

@@ -11,7 +11,7 @@
 // =============================================================================
 import { el, clear } from './dom.js';
 import { activeSite } from '../model/sites.js';
-import { isFlat } from '../model/horizon.js';
+import { makeHorizon, isFlat } from '../model/horizon.js';
 import { polarAlignment } from '../model/polar.js';
 
 const CARD = { r: 92, R: 70 };    // reticle svg half-size, dial radius
@@ -26,7 +26,7 @@ export function renderPolar(app, state, nav) {
 
   const now = new Date();
   const p = polarAlignment(site, now);
-  const flat = isFlat({ altitudes: normalize(site.horizon) });
+  const flat = isFlat(makeHorizon(site.horizon)); // accepts every stored shape
 
   app.append(
     header(site, nav),
@@ -175,8 +175,3 @@ function noSiteGate(nav) {
 }
 
 const fmtHA = (h) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, '0')}m`;
-function normalize(arr) {
-  const out = new Array(36).fill(0);
-  if (Array.isArray(arr)) for (let i = 0; i < 36; i++) { const v = Number(arr[i]); if (Number.isFinite(v)) out[i] = v; }
-  return out;
-}
