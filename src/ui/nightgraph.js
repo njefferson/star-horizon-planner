@@ -39,6 +39,8 @@ const SERIES = ['#3987e5', '#008300', '#d55181', '#c98500', '#199e70', '#d95926'
 // marker shape, drawn on the curve and mirrored in the legend, table and scrub.
 const MARKS = ['circle', 'square', 'triangle', 'diamond', 'plus', 'cross', 'downtri', 'pentagon'];
 const CASE = '#0d1018';           // dark casing stroked under bright curve runs
+const BLOCKED = '#8a93ad';        // up-but-behind-your-horizon runs: neutral grey (+ dashed,
+                                  // so "blocked" never rides on colour alone)
 const MAX_TARGETS = 8;
 const seriesMark = (i) => MARKS[i % MARKS.length];
 
@@ -72,6 +74,15 @@ export async function renderTonight(app, state, nav) {
 
   clear(app);
   app.append(header(state, nav, site, targets.length, favIds.size, previewing));
+
+  // Without a measured horizon the curves can't be "cut" — everything above 0°
+  // reads as clear, so there's nothing grey. Say so, and offer to fix it.
+  if (isFlat(profile)) {
+    app.append(el('div.ng-flat', { role: 'status' }, [
+      el('span.dim.small', {}, 'Flat horizon — curves aren’t cut by your treeline yet, so nothing shows as blocked.'),
+      el('button.btn.small.primary', { onclick: () => nav.go('#/capture/live') }, '📷 Measure horizon'),
+    ]));
+  }
 
   if (!targets.length) { // only if the catalog itself is empty — a real dead end
     app.append(deadEnd('Catalog is empty', 'Reopen once online to cache the object catalog.'));
@@ -126,7 +137,7 @@ export async function renderTonight(app, state, nav) {
     visibilitySection(series, observer, profile, win, instrument),
     el('p.settings-foot', {}, win.polar
       ? 'The Sun stays up all “night” at this site/date — showing a fixed window.'
-      : `Sunset ${hm(win.sunset)} · sunrise ${hm(win.sunrise)} (device time). Bright = above your horizon; faded = up but behind the treeline.`));
+      : `Sunset ${hm(win.sunset)} · sunrise ${hm(win.sunrise)} (device time). Solid colour = clear of your horizon; grey dashed = up but behind your treeline.`));
 
   function draw() {
     const w = wrap.clientWidth || 640;
@@ -225,9 +236,10 @@ function drawBase(ctx, s, { twilight, series, moonPts }) {
     // so contrast holds regardless of which band the curve crosses.
     ctx.globalAlpha = 1; ctx.strokeStyle = CASE; ctx.lineWidth = 4;
     strokeCurve(ctx, s, ser.pts, true);          // casing under the full up-portion
-    ctx.globalAlpha = 0.42; ctx.strokeStyle = ser.color; ctx.lineWidth = 2;
-    strokeCurve(ctx, s, ser.pts, true);          // up-but-blocked, faint
-    ctx.globalAlpha = 1;
+    // Up but BEHIND your horizon → neutral grey + dashed: not observable yet.
+    ctx.strokeStyle = BLOCKED; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    strokeCurve(ctx, s, ser.pts, true);
+    ctx.setLineDash([]);
     ctx.strokeStyle = CASE; ctx.lineWidth = 4;
     strokeVisible(ctx, s, ser.pts);              // casing under the visible run
     ctx.strokeStyle = ser.color; ctx.lineWidth = 2;

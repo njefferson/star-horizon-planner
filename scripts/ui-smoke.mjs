@@ -115,6 +115,9 @@ await step('boot: 6 tabs, Tonight opens into the sky at the seeded default site'
   ok(/use my location/i.test(await page.$eval('.ng-approx', (e) => e.textContent)), 'approx-location nudge offers geolocation');
   ok(/city or zip/i.test(await page.$eval('.ng-approx', (e) => e.textContent)), 'approx-location nudge offers a city/ZIP search');
   ok(!(await page.$('.dead-end')), 'Tonight is not a dead-end on first run');
+  // Flat (unmeasured) horizon → an explicit prompt explaining why nothing is
+  // greyed as blocked, with a way to measure it.
+  ok(/measure horizon/i.test(await page.$eval('.ng-flat', (e) => e.textContent)), 'flat horizon prompts to measure it');
 });
 
 await step('location: the city/ZIP search dialog opens from the Tonight nudge', async () => {
@@ -307,6 +310,9 @@ await step('tonight: canvas paints, visibility row + effective window language',
     return false;
   });
   ok(painted, 'night-graph canvas has pixels');
+  // This site has a measured 18° horizon → no "measure horizon" prompt, and the
+  // curves are cut by it (blocked runs drawn grey).
+  ok(!(await page.$('.ng-flat')), 'measured horizon → no flat-horizon prompt');
   // Keyboard time-scrub (WCAG 2.1.1): the graph is a focusable slider; arrows
   // move the cursor and the aria-valuetext (clock time) updates.
   await page.focus('.ng-wrap');

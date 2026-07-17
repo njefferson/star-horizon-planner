@@ -66,6 +66,7 @@ function pairs(t, mode) {
     ['card text (ink/card)', t('ink'), t('card'), AA],
     ['link text (a) on card', t('accent-ink'), t('card'), AA],
     ['inline link (.linklike) on bg', t('accent-ink'), t('bg'), AA],
+    ['night graph: blocked-run grey on curve casing', '#8a93ad', '#0d1018', UI],
     ['dim small text on bg2', t('dim'), t('bg2'), AA],
     ['dim small text on card', t('dim'), t('card'), AA],
     ['accent-ink on accent-wash (badges)', t('accent-ink'), t('accent-wash'), AA],

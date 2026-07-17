@@ -298,8 +298,8 @@ a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.
 .ng-head-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .ng-datenav { display: flex; gap: 6px; flex-wrap: wrap; }
 .ng-datenav .btn { min-width: 64px; text-align: center; }
-/* One-tap "set your real location" nudge on Tonight when the site is a placeholder. */
-.ng-approx { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+/* Nudges on Tonight: set a real location, or measure the horizon. */
+.ng-approx, .ng-flat { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin: 8px 0 4px; padding: 8px 10px; border-radius: 10px;
   background: var(--accent-wash); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 /* A text button that reads as an inline link (keyboard-focusable, real button). */
