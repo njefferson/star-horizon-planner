@@ -64,6 +64,7 @@ function pairs(t, mode) {
   const p = [
     ['body text (ink/bg)', t('ink'), t('bg'), AA],
     ['card text (ink/card)', t('ink'), t('card'), AA],
+    ['link text (a) on card', t('accent-ink'), t('card'), AA],
     ['dim small text on bg2', t('dim'), t('bg2'), AA],
     ['dim small text on card', t('dim'), t('card'), AA],
     ['accent-ink on accent-wash (badges)', t('accent-ink'), t('accent-wash'), AA],

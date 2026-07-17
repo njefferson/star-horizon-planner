@@ -49,6 +49,16 @@
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   .btn:active, .toast-action:active, .about-btn:active, .theme-btn:active { transform: none; }
 }
+/* Windows High Contrast / forced-colors strips background-color and box-shadow,
+   so focus rings built from box-shadow vanish and colour-only "selected"/"active"
+   cues are lost. Restore a real outline on focus and on the selected states that
+   don't already carry a text badge (accessibility standing order). */
+@media (forced-colors: active) {
+  .tab:focus-visible, .about-btn:focus-visible, .theme-btn:focus-visible,
+  .ng-wrap:focus-visible { outline: 2px solid; outline-offset: 2px; }
+  .chip.active { outline: 2px solid; }
+  .tab.active { text-decoration: underline; text-underline-offset: 3px; }
+}
 html, body { margin: 0; background: var(--bg); color: var(--ink);
   font-family: var(--sans); font-size: 15px; line-height: 1.45; }
 /* No element may push the page wider than the viewport — a single overflowing
@@ -69,7 +79,7 @@ h1 { font-size: 22px; margin: 0; font-family: var(--serif); font-weight: 600; }
 [tabindex="-1"]:focus { outline: none; }
 h2 { font-size: 16px; margin: 0 0 6px; }
 h3 { font-size: 14px; margin: 14px 0 4px; }
-a { color: var(--accent); }
+a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.5:1 on cards */
 .dim { color: var(--dim); }
 .small { font-size: 12px; }
 .empty { color: var(--dim); text-align: center; padding: 40px 0; }
@@ -245,6 +255,7 @@ a { color: var(--accent); }
   border-radius: 12px; overflow: hidden; background: #0d1018; }
 .ng-base, .ng-over { position: absolute; inset: 0; display: block; }
 .ng-over { touch-action: none; cursor: crosshair; }
+.ng-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ng-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-size: 12px; color: var(--dim); }
 .ng-leg { display: inline-flex; align-items: center; gap: 6px; }
 .ng-leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }

@@ -141,7 +141,7 @@ function calibrateCard(site) {
     el('h2', {}, '2 · Calibrate (compass truth)'),
     el('p.dim.small', {}, 'Device headings are magnetic and locally disturbed — up to ~±15° off true north. One sighting of the Sun fixes it: point the camera at the Sun (through a safe filter — never look straight at it), then tap.'),
     el('div.card-actions', {}, [
-      el('button.btn.primary', { onclick: () => calibrateFromSun(site) }, '☀ Sighting the Sun — calibrate'),
+      el('button.btn.primary', { onclick: () => calibrateFromSun(site), 'aria-label': 'Calibrate by sighting the Sun' }, '☀ Sighting the Sun — calibrate'),
     ]),
     el('p.small', { id: 'cap-cal', 'aria-live': 'polite' }, calText()),
     el('label.fld', {}, [el('span', {}, 'Manual offset (°, east-positive) — night fallback'), manual]),
@@ -171,7 +171,7 @@ function sweepCard() {
     el('h2', {}, '3 · Sweep the treeline'),
     el('p.dim.small', {}, 'Tap Record, then pan the sight along the top of everything blocking your sky, all the way around. Samples land in 1° bins; the median beats hand jitter.'),
     el('div.card-actions', {}, [
-      el('button.btn.primary', { id: 'cap-rec', onclick: toggleRecording }, cap.recording ? '■ Stop' : '● Record'),
+      el('button.btn.primary', { id: 'cap-rec', onclick: toggleRecording, 'aria-label': cap.recording ? 'Stop recording' : 'Record sweep' }, cap.recording ? '■ Stop' : '● Record'),
       el('button.btn', { onclick: resetSweep }, 'Reset sweep'),
     ]),
     el('p.small.mono', { id: 'cap-cov' }, covText()),
@@ -246,7 +246,7 @@ function repaint() {
   const enable = root.querySelector('#cap-enable');
   if (enable) enable.textContent = cap.enabled ? 'Sensors on' : 'Enable compass & tilt';
   const rec = root.querySelector('#cap-rec');
-  if (rec) { rec.textContent = cap.recording ? '■ Stop' : '● Record'; rec.classList.toggle('rec', cap.recording); }
+  if (rec) { rec.textContent = cap.recording ? '■ Stop' : '● Record'; rec.setAttribute('aria-label', cap.recording ? 'Stop recording' : 'Record sweep'); rec.classList.toggle('rec', cap.recording); }
   const strip = root.querySelector('#cap-strip');
   if (strip) strip.replaceChildren(...coverStrip());
 }

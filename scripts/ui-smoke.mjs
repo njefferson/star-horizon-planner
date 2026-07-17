@@ -195,6 +195,20 @@ await step('targets: search the catalog and favourite M42', async () => {
   ok(await page.$eval('.target-row .fav.on', (e) => e.getAttribute('aria-pressed')) === 'true', 'favourite aria-pressed tracks state in place');
 });
 
+await step('keyboard: focus survives an in-view filter toggle (no jump to h1)', async () => {
+  // Regression guard for WCAG 3.2.2: toggling a chip must not throw focus to the
+  // view heading — rerender restores focus to the control by its accessible name.
+  await page.focus('.chip:has-text("Galaxy")');
+  await page.keyboard.press('Enter'); // toggles the category → nav.rerender()
+  const focused = await page.evaluate(() => {
+    const a = document.activeElement;
+    return { text: (a.textContent || '').trim(), cls: a.className, tag: a.tagName };
+  });
+  ok(/Galaxy/.test(focused.text) && /chip/.test(focused.cls), `focus stayed on the chip, not h1 (was ${focused.tag}.${focused.cls})`);
+  await page.keyboard.press('Enter'); // toggle back off, focus should still hold
+  ok(await page.evaluate(() => /chip/.test(document.activeElement.className)), 'focus holds across a second toggle');
+});
+
 await step('tonight: canvas paints, visibility row + effective window language', async () => {
   await tab('Tonight');
   await page.waitForSelector('.ng-base');
@@ -206,6 +220,15 @@ await step('tonight: canvas paints, visibility row + effective window language',
     return false;
   });
   ok(painted, 'night-graph canvas has pixels');
+  // Keyboard time-scrub (WCAG 2.1.1): the graph is a focusable slider; arrows
+  // move the cursor and the aria-valuetext (clock time) updates.
+  await page.focus('.ng-wrap');
+  const before = await page.$eval('.ng-wrap', (e) => e.getAttribute('aria-valuetext'));
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const after = await page.$eval('.ng-wrap', (e) => e.getAttribute('aria-valuetext'));
+  ok(before !== after && /\d\d:\d\d/.test(after), `keyboard scrub advanced the time cursor (${before} → ${after})`);
+  ok(/\d/.test(await page.$eval('.ng-readout', (e) => e.textContent)), 'readout shows values after keyboard scrub');
   const row = await page.$eval('.vis-row', (e) => e.textContent);
   ok(/up|never up/.test(row), `row shows a geometric window: ${row}`);
   const moon = await page.$('.vis-moon');

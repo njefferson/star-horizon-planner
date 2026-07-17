@@ -155,6 +155,7 @@ function controls(f, inst, nav, paint) {
     [['messier', 'Messier'], ['mag', 'Brightness'], ['size', 'Size'], ['name', 'Name']],
     f.sort, (v) => { f.sort = v; nav.rerender(); }));
   const favBtn = chip('★ Favourites', f.favoritesOnly, () => { f.favoritesOnly = !f.favoritesOnly; nav.rerender(); });
+  favBtn.setAttribute('aria-label', 'Favourites only'); // else SR reads the ★ glyph name
 
   // "Up tonight" narrows to what actually clears the active site's measured
   // horizon during dark hours — the app's thesis applied to discovery. Needs a
@@ -162,7 +163,8 @@ function controls(f, inst, nav, paint) {
   const site = activeSite();
   const visBtn = site
     ? chip('🌙 Up tonight', f.visibleOnly, () => { f.visibleOnly = !f.visibleOnly; nav.rerender(); })
-    : el('button.chip', { disabled: '', title: 'Add an observing site first (Sites tab)', 'aria-disabled': 'true' }, '🌙 Up tonight');
+    : el('button.chip', { disabled: '', title: 'Add an observing site first (Sites tab)', 'aria-disabled': 'true', 'aria-label': 'Up tonight (add a site first)' }, '🌙 Up tonight');
+  if (site) visBtn.setAttribute('aria-label', 'Up tonight — clears your horizon during dark hours');
 
   return el('div.filters', {}, [
     el('div.filters-head', {}, [

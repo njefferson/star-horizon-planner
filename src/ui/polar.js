@@ -51,7 +51,7 @@ function header(site, nav) {
     el('div.row-actions', {}, [
       el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
-      el('button.btn.small', { onclick: () => nav.rerender() }, '↻ Refresh'),
+      el('button.btn.small', { onclick: () => nav.rerender(), 'aria-label': 'Refresh' }, '↻ Refresh'),
     ]),
   ]);
 }

@@ -32,9 +32,29 @@ const app = document.getElementById('app');
 const tabsRoot = document.getElementById('tabs');
 
 const nav = {
-  go(hash) { if (location.hash === hash) render(); else location.hash = hash; },
-  rerender() { render(); },
+  go(hash) { if (location.hash === hash) render(true); else location.hash = hash; },
+  // An in-view repaint must NOT throw focus to the heading (WCAG 3.2.2): capture
+  // the focused control's identity before the rebuild and restore it after, so
+  // toggling a chip or stepping the date keeps you on that control.
+  rerender() { render(false, focusKey()); },
 };
+
+// A rebuild-stable identity for the focused control: tag + role + accessible
+// label (aria-label, else trimmed text). Chips/selects/date buttons keep their
+// label across a rerender, so this re-finds the same control.
+function focusKey() {
+  const a = document.activeElement;
+  if (!a || a === document.body || !app.contains(a)) return null;
+  const label = (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 80);
+  return `${a.tagName}#${a.getAttribute('role') || ''}#${label}`;
+}
+function restoreFocus(key) {
+  if (!key) return;
+  for (const el of app.querySelectorAll('button, input, select, textarea, a[href], [role="slider"], [tabindex]')) {
+    const label = (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 80);
+    if (`${el.tagName}#${el.getAttribute('role') || ''}#${label}` === key) { el.focus({ preventScroll: true }); return; }
+  }
+}
 
 // 22px line icons, stroke=currentColor so the tab's colour (--tab-ink / active
 // --tab-ink-active) drives them. Tonight = altitude curve, Targets = star,
@@ -64,23 +84,25 @@ function renderTabs() {
   }));
 }
 
-// After a tab navigation, move focus to the new view's heading so keyboard and
-// screen-reader users land in the content (not left on the old tab). Skipped on
-// first paint — booting shouldn't steal focus.
+// On a tab navigation, move focus to the new view's heading so keyboard and
+// screen-reader users land in the content. Skipped on first paint — booting
+// shouldn't steal focus.
 let booted = false;
 function focusHeading() {
-  if (!booted) return;
   const h1 = app.querySelector('h1');
   if (h1) { h1.setAttribute('tabindex', '-1'); h1.focus({ preventScroll: true }); }
 }
 
-function render() {
+// navigated=true → a view change (focus the heading); false → an in-view
+// repaint (restore focus to the control identified by `key`).
+function render(navigated = true, key = null) {
   const h = location.hash || '#/';
   renderTabs();
   window.scrollTo(0, 0);
-  // Live views own their rendering into `app`. Focus the heading afterwards;
-  // async views (Tonight, Targets) focus once their first paint lands.
-  const done = (p) => { if (p && typeof p.then === 'function') p.then(focusHeading); else focusHeading(); };
+  const after = () => { if (!booted) return; navigated ? focusHeading() : restoreFocus(key); };
+  // Live views own their rendering into `app`; async views (Tonight, Targets)
+  // settle their focus once the first paint lands.
+  const done = (p) => { (p && typeof p.then === 'function') ? p.then(after) : after(); };
   if (h.startsWith('#/targets')) return done(renderTargets(app, state, nav));
   if (h.startsWith('#/capture')) return done(renderCapture(app, state, nav)); // sub-view of Horizon, no tab
   if (h.startsWith('#/horizon')) return done(renderHorizonEditor(app, state, nav));
@@ -90,7 +112,7 @@ function render() {
   return done(renderTonight(app, state, nav)); // '#/' and anything else
 }
 
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => render(true));
 
 // Boot.
 (function boot() {

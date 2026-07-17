@@ -79,6 +79,18 @@ for (const theme of ['light', 'dark']) {
   const page = await ctx.newPage();
   page.setDefaultTimeout(10000);
 
+  async function runAxe(label) {
+    await page.evaluate(AXE);
+    const res = await page.evaluate((tags) => window.axe.run(document, {
+      runOnly: { type: 'tag', values: tags }, resultTypes: ['violations'],
+    }), TAGS);
+    scanned++;
+    for (const v of res.violations) {
+      if (allow[v.id]) continue;
+      violations.push({ theme, label, id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, sample: v.nodes[0]?.target?.join(' ') });
+    }
+  }
+
   for (const [label, hash] of VIEWS) {
     await page.goto(BASE + hash, { waitUntil: 'domcontentloaded' });
     // Wait for the async views to paint real content, not the "Loading…" stub.
@@ -87,15 +99,29 @@ for (const theme of ['light', 'dark']) {
       return a && !/^\s*(Loading|Checking)/.test(a.textContent || '') && a.children.length > 0;
     }).catch(() => {});
     await page.waitForTimeout(150);
-    await page.evaluate(AXE);
-    const res = await page.evaluate((tags) => window.axe.run(document, {
-      runOnly: { type: 'tag', values: tags },
-      resultTypes: ['violations'],
-    }), TAGS);
-    scanned++;
-    for (const v of res.violations) {
-      if (allow[v.id]) continue;
-      violations.push({ theme, label, id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, sample: v.nodes[0]?.target?.join(' ') });
+    await runAxe(label);
+  }
+
+  // Modal dialogs are a classic automated-audit blind spot — axe on the initial
+  // DOM never reaches them. Open each and scan its contents + labelling.
+  const DIALOGS = [
+    ['About dialog', '#/', '#about-btn', '.about-dialog'],
+    ['Add-site dialog', '#/sites', '.row-actions .btn.primary', '.loc-dialog'],
+    ['Import-backup dialog', '#/sites', '.btn:has-text("Import backup")', '.loc-dialog'],
+    ['Custom-scope dialog', '#/settings', '.btn:has-text("Add custom telescope")', '.loc-dialog'],
+    ['Import-horizon dialog', '#/horizon', '.hz-actions .btn:has-text("Import")', '.hz-dialog'],
+  ];
+  for (const [label, hash, opener, dialog] of DIALOGS) {
+    await page.goto(BASE + hash, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(opener).catch(() => {});
+    await page.click(opener).catch(() => {});
+    if (await page.$(dialog)) {
+      await page.waitForTimeout(100);
+      await runAxe(label);
+      await page.keyboard.press('Escape').catch(() => {});
+    } else {
+      console.error(`a11y-scan: could not open ${label} (${opener})`);
+      process.exitCode = 1;
     }
   }
   await ctx.close();
@@ -112,4 +138,4 @@ if (violations.length) {
   }
   process.exit(1);
 }
-console.log(`\naxe: 0 violations across ${scanned} view scans (7 views × 2 themes), WCAG 2.2 A/AA.`);
+console.log(`\naxe: 0 violations across ${scanned} scans (7 views + 5 dialogs × 2 themes), WCAG 2.2 A/AA.`);

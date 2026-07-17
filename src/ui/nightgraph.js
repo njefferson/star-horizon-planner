@@ -90,8 +90,21 @@ export async function renderTonight(app, state, nav) {
   base.setAttribute('aria-label',
     `Altitude-versus-time graph for ${targets.map((t) => shortName(t)).join(', ')}, cut by your measured horizon. The visibility table below lists each target's windows in text.`);
   over.setAttribute('aria-hidden', 'true');
+  // The scrub is a time cursor over the night — expose it as a keyboard slider
+  // (arrows/Home/End) so reading "altitude at time" isn't pointer-only.
+  wrap.setAttribute('tabindex', '0');
+  wrap.setAttribute('role', 'slider');
+  wrap.setAttribute('aria-label', 'Scrub the night — read each target’s altitude at a time');
+  wrap.setAttribute('aria-valuemin', Math.round(win.start.getTime() / 60000));
+  wrap.setAttribute('aria-valuemax', Math.round(win.end.getTime() / 60000));
+  // A slider must always carry aria-valuenow; start it mid-night (no cursor is
+  // drawn until the user scrubs, but the value must be present from the first paint).
+  const midMs = Math.round((win.start.getTime() + win.end.getTime()) / 2);
+  wrap.setAttribute('aria-valuenow', Math.round(midMs / 60000));
+  wrap.setAttribute('aria-valuetext', hourLabelFull(midMs));
   wrap.append(base, over);
-  const readout = el('div.ng-readout', {}, hintText(profile));
+  // aria-live so keyboard scrubbing announces the readout values.
+  const readout = el('div.ng-readout', { 'aria-live': 'polite' }, hintText(profile));
   const legend = buildLegend(series, moonNow);
 
   const instrument = activeInstrument();
@@ -110,19 +123,34 @@ export async function renderTonight(app, state, nav) {
   draw();
   window.addEventListener('resize', draw, { passive: true });
 
-  // Scrub — pointer/drag reads altitudes at a time.
+  // Scrub — pointer/drag AND keyboard read altitudes at a time.
   const octx = over.getContext('2d');
-  function scrub(clientX) {
-    const r = over.getBoundingClientRect();
-    const px = clientX - r.left;
-    const ms = model.tOf(px);
-    drawScrub(octx, model, ms, series, profile, observer, readout);
+  let scrubMs = null;
+  function scrubTo(ms) {
+    scrubMs = Math.max(model.t0, Math.min(model.t1, ms));
+    wrap.setAttribute('aria-valuenow', Math.round(scrubMs / 60000));
+    wrap.setAttribute('aria-valuetext', hourLabelFull(scrubMs));
+    drawScrub(octx, model, scrubMs, series, profile, observer, readout);
   }
+  const scrub = (clientX) => scrubTo(model.tOf(clientX - over.getBoundingClientRect().left));
   over.addEventListener('pointerdown', (e) => { over.setPointerCapture(e.pointerId); scrub(e.clientX); });
   over.addEventListener('pointermove', (e) => { if (e.pressure > 0 || e.buttons) scrub(e.clientX); });
   // Leave the last reading + cursor on screen after release — on a phone you
   // lift your finger to read the numbers. Hover (no button) also scrubs.
   over.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) scrub(e.clientX); });
+
+  // Keyboard time cursor: ←/→ step 15 min, PageUp/Down 1 h, Home/End the ends.
+  const SPAN = model.t1 - model.t0;
+  wrap.addEventListener('keydown', (e) => {
+    const step = { ArrowLeft: -15, ArrowRight: 15, PageUp: 60, PageDown: -60 };
+    let ms = scrubMs ?? model.t0 + SPAN / 2;
+    if (e.key in step) ms += step[e.key] * 60000;
+    else if (e.key === 'Home') ms = model.t0;
+    else if (e.key === 'End') ms = model.t1;
+    else return;
+    e.preventDefault();
+    scrubTo(ms);
+  });
 }
 
 // --- scales -----------------------------------------------------------------
@@ -324,9 +352,9 @@ function header(state, nav, site, shown, favCount) {
   return el('div.ng-head', {}, [
     el('div.ng-head-top', {}, [el('h1', {}, 'Tonight')]),
     el('div.ng-datenav', {}, [
-      el('button.btn.small', { onclick: () => shiftNight(state, nav, -1) }, '‹ Prev'),
+      el('button.btn.small', { onclick: () => shiftNight(state, nav, -1), 'aria-label': 'Previous night' }, '‹ Prev'),
       el('button.btn.small', { onclick: () => { state.night = noonToday(); nav.rerender(); } }, nightLabel(state.night)),
-      el('button.btn.small', { onclick: () => shiftNight(state, nav, +1) }, 'Next ›'),
+      el('button.btn.small', { onclick: () => shiftNight(state, nav, +1), 'aria-label': 'Next night' }, 'Next ›'),
       el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
     ]),
