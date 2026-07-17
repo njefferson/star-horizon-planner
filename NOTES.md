@@ -356,7 +356,16 @@ tools:**
   export/import with sites so they aren't trapped in one browser.
 - **Weather overlay** — Open-Meteo cloud cover shaded behind the night graph on the
   same time axis, then 7Timer seeing/transparency. Cache per site/night.
-- **Thumbnails** — hips2fits per object, on demand, Cache-API cached.
+- **Thumbnails + object details** — STARTED (first cut, `staging`): `model/
+  thumbnails.js` builds a CDS hips2fits DSS2-colour cutout URL per object (RA
+  hours→deg, FOV framed to the object). A small preview image sits on each
+  Targets line and is the tap target for a new **details page**
+  (`#/target/<id>`, `ui/targetdetail.js`): larger representative image + facts
+  (type/mag/size/RA/Dec) + active-instrument framing + favourite toggle. Plain
+  `<img>` (no CORS needed to display); degrades to a labelled placeholder
+  offline — never a broken glyph. Cache-API precache-per-object still to come.
+  Placement + details layout are being tuned to Noah's screenshots (the Seestar
+  look = DSS2 colour). SW v14.
 - **Map-pin terrain horizon** (Noah's "10° in 360°" scaling idea): drop pins on a
   **keyless** satellite map (Leaflet + free Esri imagery — NOT Google Maps, which
   needs an API key + billing) + a free elevation API to estimate a **terrain**

@@ -8,6 +8,7 @@ import {
   loadCatalog, filterCatalog, CATEGORIES, shortName,
   isFavorite, toggleFavorite,
 } from '../model/catalog.js';
+import { thumbUrl } from '../model/thumbnails.js';
 import { activeInstrument, fovOf } from '../model/instruments.js';
 import { activeSite } from '../model/sites.js';
 import { makeObserver } from '../model/astro.js';
@@ -191,6 +192,7 @@ function row(o) {
     : el('span.tier.mosaic', { title: `${fr.panels} panels` }, `${fr.cols}×${fr.rows}`);
   const fav = isFavorite(o.id);
   return el('div.target-row', {}, [
+    thumbButton(o),
     el('button.fav', {
       class: fav ? 'on' : '', title: fav ? 'Remove favourite' : 'Add favourite',
       'aria-label': fav ? 'Remove favourite' : 'Add favourite', 'aria-pressed': fav ? 'true' : 'false',
@@ -209,7 +211,7 @@ function row(o) {
     el('div.target-main', {}, [
       el('div.target-name', {}, [
         o.m ? el('span.mbadge', {}, `M${o.m}`) : null,
-        el('span.tname', {}, shortName(o)),
+        el('button.tname.linklike', { onclick: () => { location.hash = `#/target/${o.id}`; }, 'aria-label': `${shortName(o)} — details` }, shortName(o)),
         o.common ? el('span.tsub', {}, o.name) : null,
       ]),
       el('div.target-meta', {}, [
@@ -220,6 +222,23 @@ function row(o) {
     ]),
     tier,
   ]);
+}
+
+// A small preview image on each line, itself the tap target for the details
+// page. The <img> is decorative (the name button carries the label); on load
+// error (offline / no cutout) it falls back to a labelled placeholder tile so
+// the row never shows a broken-image glyph.
+function thumbButton(o) {
+  const img = el('img.tthumb-img', {
+    loading: 'lazy', decoding: 'async', width: 48, height: 48, alt: '',
+    src: thumbUrl(o, { width: 96, height: 96 }),
+  });
+  img.addEventListener('error', () => { img.remove(); btn.classList.add('broken'); btn.append(el('span.tthumb-ph', { 'aria-hidden': 'true' }, '★')); });
+  const btn = el('button.target-thumb', {
+    onclick: () => { location.hash = `#/target/${o.id}`; },
+    'aria-label': `${shortName(o)} — details`,
+  }, [img]);
+  return btn;
 }
 
 // arcmin, but switch to degrees once an object is bigger than a degree.

@@ -14,6 +14,7 @@ import { renderSites } from './ui/sites.js';
 import { renderPolar } from './ui/polar.js';
 import { renderCapture } from './ui/capture.js';
 import { renderLiveCapture } from './ui/livecapture.js';
+import { renderTargetDetail } from './ui/targetdetail.js';
 import { loadSites, requestPersistence, ensureDefaultSite } from './model/sites.js';
 
 const state = {
@@ -104,6 +105,7 @@ function render(navigated = true, key = null) {
   // Live views own their rendering into `app`; async views (Tonight, Targets)
   // settle their focus once the first paint lands.
   const done = (p) => { (p && typeof p.then === 'function') ? p.then(after) : after(); };
+  if (h.startsWith('#/target/')) return done(renderTargetDetail(app, state, nav)); // per-object details, no tab
   if (h.startsWith('#/targets')) return done(renderTargets(app, state, nav));
   if (h.startsWith('#/capture/live')) return done(renderLiveCapture(app, state, nav)); // live-camera AR capture
   if (h.startsWith('#/capture')) return done(renderCapture(app, state, nav)); // sub-view of Horizon, no tab

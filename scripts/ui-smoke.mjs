@@ -75,11 +75,13 @@ const page = await browser.newPage({ viewport: { width: 900, height: 900 }, serv
 page.setDefaultTimeout(10000);
 page.on('pageerror', (e) => pageErrors.push(String(e)));
 page.on('console', (m) => {
-  // External font fetches can't resolve in a sandbox — everything else is real.
-  // The URL lives in location(), not always in the message text.
+  // External fetches can't resolve in a sandbox and are handled with fallbacks:
+  // Google fonts, and the hips2fits survey thumbnails (each <img> degrades to a
+  // placeholder on error). Everything else is a real error.
   const t = m.text();
   const at = `${m.location()?.url || ''} ${t}`;
-  if (m.type() === 'error' && !/fonts\.g(oogleapis|static)\.com/.test(at)) pageErrors.push(t);
+  const external = /fonts\.g(oogleapis|static)\.com|alasky\.u-strasbg\.fr|hips2fits/.test(at);
+  if (m.type() === 'error' && !external) pageErrors.push(t);
 });
 page.on('dialog', (d) => d.accept()); // confirm() on remove/reset
 // Kill external font requests outright: in a sandbox they hang until a
@@ -245,6 +247,20 @@ await step('targets: search the catalog and favourite M42', async () => {
   await page.click('.target-row .fav');
   ok(await page.$('.target-row .fav.on') !== null, 'favourite toggled on');
   ok(await page.$eval('.target-row .fav.on', (e) => e.getAttribute('aria-pressed')) === 'true', 'favourite aria-pressed tracks state in place');
+});
+
+await step('target details: a row thumbnail opens the details page and back returns', async () => {
+  await page.waitForSelector('.target-row .target-thumb');
+  // The thumbnail is the tap target → per-object details. (The survey image
+  // itself needs network; here it degrades to a placeholder, tested below.)
+  await page.click('.target-row .target-thumb');
+  await page.waitForSelector('.td-facts');
+  const facts = await page.$eval('.td-facts', (e) => e.textContent);
+  ok(/Magnitude/.test(facts) && /Framing/.test(facts), `details facts render: ${/Magnitude/.test(facts)}`);
+  ok(await page.$('.td-image, .td-image.broken') !== null, 'representative image area present (image or offline placeholder)');
+  await page.click('.td-head .btn:has-text("Targets")');
+  await page.waitForSelector('.target-row');
+  ok(true, 'back to the Targets list');
 });
 
 await step('keyboard: focus survives an in-view filter toggle (no jump to h1)', async () => {
