@@ -4,24 +4,23 @@
 # has a high number (>100) of deployments — see
 # https://developers.cloudflare.com/pages/platform/known-issues/#delete-a-project-with-a-high-amount-of-deployments
 # Every push to a branch other than `main` creates a preview deployment, so they
-# pile up. This runs Cloudflare's recommended `wrangler pages deployment delete`
-# loop on a GitHub runner (Node preinstalled) using the same repo secrets the
-# deploy workflow already uses — so there's nothing to install or authenticate
-# locally.
+# pile up. This talks to the Cloudflare REST API directly (curl + jq, both on the
+# runner) using the same repo secrets the deploy workflow already uses — nothing
+# to install or authenticate locally.
 #
-# Manual only (workflow_dispatch). It KEEPS the active production deployment and
-# deletes everything else. Run it with "Dry run" checked first to see the list.
+# Manual only (workflow_dispatch). It deletes ONLY preview deployments and never
+# touches production. Run it with "Dry run" checked first to see the counts.
 name: Purge Cloudflare Pages deployments
 
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run — list what would be deleted, delete nothing"
+        description: "Dry run — count what would be deleted, delete nothing"
         type: boolean
         default: true
 
-# Never let two purges (or a purge and itself) race over the same deployment set.
+# Never let two purges race over the same deployment set.
 concurrency:
   group: purge-deployments
   cancel-in-progress: false
@@ -30,43 +29,58 @@ jobs:
   purge:
     runs-on: ubuntu-latest
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PROJECT: star-horizon-planner
     steps:
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-
-      - name: Install Wrangler
-        run: npm install -g wrangler@3
-
-      - name: List deployments (dry run)
-        if: ${{ inputs.dry_run }}
+      - name: Purge preview deployments via Cloudflare API
         run: |
-          echo "Deployments for $PROJECT — the active production one is always kept:"
-          wrangler pages deployment list --project-name "$PROJECT" --json \
-            | jq -r '.[] | "\(.Environment)\t\(.Id)"' | sort || true
-          echo
-          echo "Uncheck \"Dry run\" and re-run to delete everything except the active production deployment."
+          set +e; set -uo pipefail          # handle HTTP errors ourselves, don't abort mid-loop
+          API="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN")
 
-      - name: Delete deployments (keep active production)
-        if: ${{ !inputs.dry_run }}
-        run: |
-          # Cloudflare refuses to delete the ACTIVE production deployment, which
-          # would make a naive "list, delete all, repeat" loop spin forever. So
-          # we learn that one deployment's id from the failed delete and exclude
-          # it on the next pass — Cloudflare's own documented workaround.
-          prod_id=""
+          # Fail fast if the token / account / project don't resolve.
+          probe=$(curl -s "${auth[@]}" "$API?per_page=1")
+          if [ "$(echo "$probe" | jq -r '.success')" != "true" ]; then
+            echo "Cloudflare API error — check the CLOUDFLARE_* secrets and project name:"
+            echo "$probe" | jq -r '.errors // .messages // .' 2>/dev/null || echo "$probe"
+            exit 1
+          fi
+
+          # Tally every deployment across all pages (report + dry-run basis).
+          total=0; previews=0; prod=0; page=1
           while :; do
-            ids=$(wrangler pages deployment list --project-name "$PROJECT" --json | jq -r '.[].Id')
-            to_delete=$(echo "$ids" | grep -v -F -x "$prod_id" | grep . || true)
-            [ -z "$to_delete" ] && { echo "Done. Kept active production deployment: ${prod_id:-none}"; break; }
-            echo "Deleting $(echo "$to_delete" | wc -l | tr -d ' ') deployment(s)..."
-            while IFS= read -r id; do
-              if ! wrangler pages deployment delete "$id" --project-name "$PROJECT" --force 2>&1 \
-                  | tee /tmp/wrangler-del.log | grep -q "Successfully deleted"; then
-                grep -q "active production deployment" /tmp/wrangler-del.log && prod_id="$id"
-              fi
-            done <<< "$to_delete"
+            batch=$(curl -s "${auth[@]}" "$API?per_page=100&page=$page" | jq -c '.result // []')
+            n=$(echo "$batch" | jq 'length')
+            [ "$n" -eq 0 ] && break
+            total=$((total + n))
+            previews=$((previews + $(echo "$batch" | jq '[.[] | select(.environment=="preview")] | length')))
+            prod=$((prod + $(echo "$batch" | jq '[.[] | select(.environment=="production")] | length')))
+            page=$((page + 1))
           done
+          echo "Total deployments: $total  (preview: $previews, production: $prod)"
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Dry run — would delete the $previews preview deployment(s); the $prod production deployment(s) are kept."
+            exit 0
+          fi
+
+          # Delete only previews. Re-fetch page 1 each pass since deletes shrink
+          # the set; production deployments are never selected, so this converges.
+          echo "Deleting $previews preview deployment(s)..."
+          deleted=0
+          while :; do
+            ids=$(curl -s "${auth[@]}" "$API?per_page=100&page=1" | jq -r '.result[]? | select(.environment=="preview") | .id')
+            [ -z "$ids" ] && break
+            progress=0
+            for id in $ids; do
+              if curl -s -X DELETE "${auth[@]}" "$API/$id?force=true" | jq -e '.success' >/dev/null; then
+                deleted=$((deleted + 1)); progress=$((progress + 1))
+              else
+                echo "  warn: could not delete $id"
+              fi
+            done
+            # Nothing in this pass could be deleted — stop rather than spin forever.
+            [ "$progress" -eq 0 ] && { echo "No further deletions possible; stopping."; break; }
+          done
+          echo "Done. Deleted $deleted preview deployment(s); production kept."
