@@ -85,7 +85,8 @@ a { color: var(--accent); }
   -webkit-backdrop-filter: blur(12px) saturate(1.04); backdrop-filter: blur(12px) saturate(1.04);
   border: 1px solid var(--dock-line); border-radius: var(--r); overflow: hidden;
   box-shadow: var(--dock-shadow), var(--dock-lip);
-  display: grid; grid-template-columns: repeat(5, 1fr); z-index: 10; }
+  /* One column per tab — track the TABS array in main.js (6 since Polar). */
+  display: grid; grid-template-columns: repeat(6, 1fr); z-index: 10; }
 .tab { background: none; border: 0; color: var(--tab-ink); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-size: 11px; }
 .tab.active { color: var(--tab-ink-active); }

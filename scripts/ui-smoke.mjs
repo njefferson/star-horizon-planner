@@ -96,6 +96,10 @@ await step('boot: 6 tabs, Tonight shows the no-site gate (honest first run)', as
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.tab');
   ok(await page.$$eval('.tab', (e) => e.length) === 6, 'expected 6 tabs');
+  // The dock grid's column count must track the tab count — a forgotten
+  // repeat(N, 1fr) wraps the last tab onto a second, clipped row.
+  const rows = await page.$$eval('.tab', (els) => new Set(els.map((e) => e.getBoundingClientRect().top)).size);
+  ok(rows === 1, `all tabs on one dock row (got ${rows} rows)`);
   await page.waitForSelector('.dead-end');
   const gate = await page.$eval('.dead-end h2', (e) => e.textContent);
   ok(/observing site/i.test(gate), `Tonight gate says: ${gate}`);
