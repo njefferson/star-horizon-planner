@@ -175,9 +175,45 @@ Lands on `staging` — the on-device gate v1 skipped; USE IT from now on
       The live "point to the pole" aid still waits for the capture stack.
 - [ ] On-device NEEDS-HIS-HANDS pass on staging: PWA install, offline, iPad
       drag feel, first-run journey (now incl. Polar + custom-scope UI)
-Deliberately NOT settled here: horizon storage resolution (36 rows vs
-arbitrary az points, negative altitudes for hilltop sites) — decide at the top
-of the sensor-capture feature, before profiles bake in.
+The v1.1 open decision (horizon storage resolution) is settled at the top of
+v1.2 below, per the review's ordering.
+
+## v1.2 — sensor-trace capture (the moat)
+
+**Settled first — horizon storage v2.** A profile is now an
+arbitrary-resolution list of (azimuth, altitude) points (sorted, wrap-aware
+interpolation, ≥1 point), not a fixed 36-bin array:
+- capture bins sensor sweeps at 1° (median per bin — robust to hand jitter);
+  Stellarium import keeps the file's own density instead of resampling away
+  detail; legacy 36-arrays (sites, backups, horizon.profile) convert on load.
+- altitudes may go BELOW 0° (hilltop/balcony sites; floor −30°) — only capture
+  and import produce negatives; the manual editor still drags in [0, 90].
+- the 36-handle editor stays as the manual-entry VIEW: handles read
+  `sampleAt(az)`, and dragging one replaces the stored points within ±5° of
+  that azimuth — hand-correcting a captured wedge coarsens just that wedge.
+- `sampleAt`/`isAbove` keep their signatures, so visibility, the night graph
+  and polar are untouched. Sites/backups store `[[az, alt], …]` pairs; old
+  backups import unchanged.
+
+**Build order (each step → staging, tests first culture):**
+- **9a** `model/horizon.js` v2 + `model/sites.js` storage — points model,
+  legacy conversion, density-preserving Stellarium I/O, negative-alt clamp;
+  rewrite horizon tests, prune the dead standalone `loadHorizon`/`saveHorizon`.
+- **9b** `ui/horizoneditor.js` on v2 — the curve draws from `sampleAt` at fine
+  steps so captured detail is visible; handles keep today's drag/keyboard UX.
+- **9c** `model/capture.js` (100% headless): top-edge pointing math from
+  device Euler angles — heading = (360 − α) % 360 and altitude = β hold
+  EXACTLY for the sighting axis under the W3C Z-X′-Y″ convention (the device
+  Y-axis is invariant under γ); **Sun-azimuth calibration** (offset = true −
+  measured, wrapped; fixes magnetic declination + local interference in one
+  sighting) with manual-offset fallback; sweep session → 1° bin medians → gap
+  interpolation → points; coverage metrics (% + widest gap).
+- **9d** `ui/capture.js` — no-camera v1: sight along the phone's top edge
+  (PS-Align style; the camera+crosshair preview from the roadmap layers on
+  later). iOS `requestPermission()` on a tap / `deviceorientationabsolute` on
+  Android; calibrate → sweep → coverage → apply to the active site. SW v9.
+  Smoke drives the Android path with synthetic orientation events; the real
+  compass/drift feel is NEEDS-HIS-HANDS on staging.
 
 ## Roadmap (deferred — post-v1, rough order)
 - **Sensor-trace horizon capture** — THE differentiator (see the review: manual
