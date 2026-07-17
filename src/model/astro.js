@@ -166,6 +166,23 @@ export function transit(bodyOrTarget, observer, date, { limitDays = 1 } = {}) {
 }
 
 /**
+ * Local hour angle of a fixed target (RA in hours, Dec in degrees), for the
+ * polar-alignment reticle. Mirrors the engine's own HourAngle() but for a
+ * user-defined star: HA = observer_longitude/15 + GAST − RA(of date), wrapped
+ * to [0,24). At HA = 0 the target is at upper transit (on the meridian, highest).
+ * Also returns its apparent equatorial position of date (precession + nutation).
+ * @returns { hourAngle (hours), ra (hours of date), dec (deg of date) }
+ */
+export function starHourAngle(target, observer, date) {
+  const t = time(date);
+  const eq = Astronomy.Equator(asBody(target), t, observer, /*ofdate*/ true, /*aberration*/ true);
+  const gast = Astronomy.SiderealTime(t);
+  let ha = (observer.longitude / 15 + gast - eq.ra) % 24;
+  if (ha < 0) ha += 24;
+  return { hourAngle: ha, ra: eq.ra, dec: eq.dec };
+}
+
+/**
  * Sample a target's altitude/azimuth from start to end at a fixed cadence —
  * the raw series the night graph draws and the visibility model scans.
  * @returns [{ time: Date, altitude, azimuth }] inclusive of both ends.
