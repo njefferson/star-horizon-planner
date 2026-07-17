@@ -22,15 +22,21 @@ const xOf = (az) => M.l + (az / 360) * PW;
 const yOf = (alt) => M.t + (1 - alt / ALT_MAX) * PH;
 const CARDINALS = [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W'], [360, 'N']];
 
+// 8-point compass label for an azimuth — used in the slider handles' spoken value.
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const dirLabel = (az) => COMPASS[Math.round(((az % 360) + 360) % 360 / 45) % 8];
+
 export function renderHorizonEditor(app, state, nav) {
   clear(app);
   const site = activeSite();
   if (!site) {
-    app.append(el('div.dead-end', {}, [
-      el('h2', {}, 'No site yet'),
-      el('p', {}, 'A horizon belongs to a site. Add one first, then draw its skyline here.'),
-      el('div.card-actions', {}, [el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites')]),
-    ]));
+    app.append(
+      el('h1', {}, 'Horizon'),
+      el('div.dead-end', {}, [
+        el('h2', {}, 'No site yet'),
+        el('p', {}, 'A horizon belongs to a site. Add one first, then draw its skyline here.'),
+        el('div.card-actions', {}, [el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites')]),
+      ]));
     return;
   }
   // Edit a live copy of THIS site's horizon; every change writes back to it.
@@ -41,8 +47,10 @@ export function renderHorizonEditor(app, state, nav) {
   const svg = document.createElementNS(svgns, 'svg');
   svg.setAttribute('viewBox', `0 0 ${VB.w} ${VB.h}`);
   svg.setAttribute('class', 'hz-svg');
-  svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Horizon altitude by azimuth — drag to edit');
+  // A group (not img) — it contains focusable slider handles, which an img
+  // subtree would hide from assistive tech.
+  svg.setAttribute('role', 'group');
+  svg.setAttribute('aria-label', 'Measured horizon — obstruction altitude at each of 36 compass directions. Focus a point and use the arrow keys to raise or lower it.');
 
   const mk = (tag, attrs) => { const n = document.createElementNS(svgns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
 
@@ -62,14 +70,24 @@ export function renderHorizonEditor(app, state, nav) {
   const line = mk('path', { class: 'hz-line' });
   svg.append(area, line);
 
-  // Draggable handles -------------------------------------------------------
+  // Draggable handles — each an ARIA slider over 0–90° obstruction altitude.
   const handles = [];
   for (let i = 0; i < N; i++) {
-    const h = mk('circle', { r: 6, class: 'hz-handle', 'data-i': i, tabindex: 0 });
+    const h = mk('circle', {
+      r: 6, class: 'hz-handle', 'data-i': i, tabindex: 0,
+      role: 'slider', 'aria-valuemin': 0, 'aria-valuemax': 90,
+      'aria-label': `Obstruction altitude ${dirLabel(azForIndex(i))} (${azForIndex(i)}°)`,
+    });
     handles.push(h); svg.append(h);
   }
+  const setHandleValue = (i) => {
+    const alt = Math.round(sampleAt(profile, azForIndex(i)));
+    handles[i].setAttribute('aria-valuenow', alt);
+    handles[i].setAttribute('aria-valuetext', `${alt}° at ${azForIndex(i)}° ${dirLabel(azForIndex(i))}`);
+  };
 
-  const readout = el('span.hz-readout', {}, '');
+  // aria-live so keyboard nudges announce the new "az · alt" value.
+  const readout = el('span.hz-readout', { 'aria-live': 'polite' }, '');
 
   function redraw() {
     // The curve samples the profile finely (2°) so captured/imported detail
@@ -85,6 +103,7 @@ export function renderHorizonEditor(app, state, nav) {
     for (let i = 0; i < N; i++) {
       handles[i].setAttribute('cx', xOf(azForIndex(i)));
       handles[i].setAttribute('cy', yOf(Math.max(0, sampleAt(profile, azForIndex(i)))));
+      setHandleValue(i);
     }
     header.querySelector('.hz-max').textContent = `tallest ${maxAltitude(profile).toFixed(0)}°`;
   }
@@ -136,7 +155,8 @@ export function renderHorizonEditor(app, state, nav) {
     el('span.hz-max.mono', {}, ''),
   ]);
   const actions = el('div.hz-actions', {}, [
-    el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${site.name}`),
+    el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${site.name} — change` },
+      [el('span', { 'aria-hidden': 'true' }, `📍 ${site.name}`)]),
     el('button.btn.primary', { onclick: () => nav.go('#/capture') }, '📡 Measure…'),
     el('button.btn', { onclick: () => { if (confirm('Reset the horizon to a flat 0°?')) { profile.points = [{ az: 0, alt: 0 }]; persist(); redraw(); toast('Horizon reset to flat.'); } } }, 'Reset'),
     el('button.btn', { onclick: () => openImport(profile, redraw, persist) }, 'Import…'),
@@ -171,13 +191,17 @@ function exportStellarium(profile, siteName) {
 
 function openImport(profile, redraw, persist) {
   document.querySelector('.hz-dialog')?.remove();
-  const ta = el('textarea.hz-import', { placeholder: 'Paste a Stellarium horizon list:\n0 12\n90 5\n180 20\n…', rows: 8 });
-  const file = el('input', { type: 'file', accept: '.txt,text/plain', onchange: async (e) => {
-    const f = e.target.files[0]; if (f) ta.value = await f.text();
-  } });
-  const dlg = el('dialog.hz-dialog', {}, [
-    el('h2', {}, 'Import horizon'),
-    el('p.dim.small', {}, 'Load a Stellarium horizon file, or paste azimuth/altitude pairs. It’s resampled onto the 36-point grid.'),
+  const ta = el('textarea.hz-import', {
+    placeholder: 'Paste a Stellarium horizon list:\n0 12\n90 5\n180 20\n…', rows: 8,
+    'aria-label': 'Stellarium horizon list — azimuth altitude pairs, one per line',
+  });
+  const file = el('input', {
+    type: 'file', accept: '.txt,text/plain', 'aria-label': 'Choose a Stellarium horizon file',
+    onchange: async (e) => { const f = e.target.files[0]; if (f) ta.value = await f.text(); },
+  });
+  const dlg = el('dialog.hz-dialog', { 'aria-labelledby': 'hz-import-title' }, [
+    el('h2', { id: 'hz-import-title' }, 'Import horizon'),
+    el('p.dim.small', {}, 'Load a Stellarium horizon file, or paste azimuth/altitude pairs. Every point in the file is kept.'),
     file,
     ta,
     el('div.hz-dialog-foot', {}, [

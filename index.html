@@ -21,6 +21,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Horizon" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,8 +29,11 @@
   <link rel="stylesheet" href="./src/styles.css" />
 </head>
 <body>
-  <main id="app" class="view"><p class="empty">Loading…</p></main>
-  <nav id="tabs" class="tabs"></nav>
+  <main id="app" class="view">
+    <p class="empty">Loading…</p>
+    <noscript>Horizon Planner is an offline app that runs in your browser — please enable JavaScript to use it. No accounts, no tracking; everything stays on your device.</noscript>
+  </main>
+  <nav id="tabs" class="tabs" aria-label="Primary"></nav>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

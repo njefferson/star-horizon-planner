@@ -112,8 +112,8 @@ function openScopeForm(nav) {
   };
   for (const inp of [focal, wpx, hpx, pum]) inp.addEventListener('input', updatePreview);
 
-  const dlg = el('dialog.loc-dialog', {}, [
-    el('h2', {}, 'Add custom telescope'),
+  const dlg = el('dialog.loc-dialog', { 'aria-labelledby': 'scope-form-title' }, [
+    el('h2', { id: 'scope-form-title' }, 'Add custom telescope'),
     el('div.loc-grid', {}, [
       labeled('Name', name),
       el('div.sensor-row', {}, [labeled('Focal length (mm)', focal), labeled('Aperture (mm)', aperture)]),

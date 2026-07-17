@@ -39,11 +39,13 @@ export function renderCapture(app, state, nav) {
   clear(app);
   const site = activeSite();
   if (!site) {
-    app.append(el('div.dead-end', {}, [
-      el('h2', {}, 'No site yet'),
-      el('p', {}, 'A measured horizon belongs to a site. Add one first.'),
-      el('div.card-actions', {}, [el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites')]),
-    ]));
+    app.append(
+      el('h1', {}, 'Measure horizon'),
+      el('div.dead-end', {}, [
+        el('h2', {}, 'No site yet'),
+        el('p', {}, 'A measured horizon belongs to a site. Add one first.'),
+        el('div.card-actions', {}, [el('button.btn.primary', { onclick: () => nav.go('#/sites') }, 'Go to Sites')]),
+      ]));
     return;
   }
 
@@ -52,7 +54,8 @@ export function renderCapture(app, state, nav) {
     el('div.pa-head', {}, [
       el('h1', {}, 'Measure horizon'),
       el('p.dim.small', {}, 'Hold the phone upright and point the back camera at the treeline, the way you’d photograph it. Tip it up for a tall obstruction, down for a downhill horizon — the altitude readout follows where the camera looks.'),
-      el('div.row-actions', {}, [el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${site.name}`)]),
+      el('div.row-actions', {}, [el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${site.name} — change` },
+        [el('span', { 'aria-hidden': 'true' }, `📍 ${site.name}`)])]),
     ]),
     sensorsCard(),
     calibrateCard(site),
@@ -140,7 +143,7 @@ function calibrateCard(site) {
     el('div.card-actions', {}, [
       el('button.btn.primary', { onclick: () => calibrateFromSun(site) }, '☀ Sighting the Sun — calibrate'),
     ]),
-    el('p.small', { id: 'cap-cal' }, calText()),
+    el('p.small', { id: 'cap-cal', 'aria-live': 'polite' }, calText()),
     el('label.fld', {}, [el('span', {}, 'Manual offset (°, east-positive) — night fallback'), manual]),
   ]);
 }

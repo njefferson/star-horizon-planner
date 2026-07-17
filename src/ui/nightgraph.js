@@ -42,11 +42,11 @@ const seriesMark = (i) => MARKS[i % MARKS.length];
 export async function renderTonight(app, state, nav) {
   clear(app);
   const site = activeSite();
-  if (!site) return app.append(noSiteGate(nav));
+  if (!site) { app.append(el('h1', {}, 'Tonight'), noSiteGate(nav)); return; }
 
   app.append(el('p.empty', {}, 'Loading tonight…'));
   let objects;
-  try { objects = await loadCatalog(); } catch { clear(app); app.append(deadEnd('Catalog unavailable', 'Reopen once online to cache it.')); return; }
+  try { objects = await loadCatalog(); } catch { clear(app); app.append(el('h1', {}, 'Tonight'), deadEnd('Catalog unavailable', 'Reopen once online to cache it.')); return; }
   if ((location.hash || '#/') !== '#/' && !location.hash.startsWith('#/tonight')) return;
 
   const favIds = favoriteIds();
@@ -322,7 +322,8 @@ function header(state, nav, site, shown, favCount) {
       el('button.btn.small', { onclick: () => shiftNight(state, nav, -1) }, '‹ Prev'),
       el('button.btn.small', { onclick: () => { state.night = noonToday(); nav.rerender(); } }, nightLabel(state.night)),
       el('button.btn.small', { onclick: () => shiftNight(state, nav, +1) }, 'Next ›'),
-      el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${label}`),
+      el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
+        [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
     ]),
     favCount > shown ? el('p.dim.small', {}, `Showing ${shown} of ${favCount} favourites (first ${MAX_TARGETS}).`) : null,
   ]);

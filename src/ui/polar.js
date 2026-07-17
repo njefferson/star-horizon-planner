@@ -49,7 +49,8 @@ function header(site, nav) {
     el('h1', {}, 'Polar Align'),
     el('p.dim.small', {}, 'Aim the mount’s polar axis at the celestial pole. Numbers update from your site and the current time.'),
     el('div.row-actions', {}, [
-      el('button.chip.ng-site', { onclick: () => nav.go('#/sites') }, `📍 ${label}`),
+      el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
+        [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
       el('button.btn.small', { onclick: () => nav.rerender() }, '↻ Refresh'),
     ]),
   ]);

@@ -50,7 +50,9 @@ export function toast(msg, opts = {}) {
   const action = opts.action || null;
   const ms = opts.ms ?? (action ? 6500 : 3500);
   document.querySelector('.toast')?.remove();
-  const t = el('div.toast', {}, [el('span.toast-msg', {}, msg)]);
+  // role=status (aria-live polite) so screen readers announce every toast —
+  // the app's async feedback channel (accessibility standing order).
+  const t = el('div.toast', { role: 'status', 'aria-live': 'polite' }, [el('span.toast-msg', {}, msg)]);
   let done = false;
   const dismiss = () => {
     if (done) return; done = true;

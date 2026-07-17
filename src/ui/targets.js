@@ -61,7 +61,7 @@ export async function renderTargets(app, state, nav) {
 
   let objects;
   try { objects = await loadCatalog(); }
-  catch { clear(app); app.append(deadEnd('Catalog unavailable', 'The bundled catalog failed to load. If you just went offline, reopen once online to cache it.')); return; }
+  catch { clear(app); app.append(el('h1', {}, 'Targets'), deadEnd('Catalog unavailable', 'The bundled catalog failed to load. If you just went offline, reopen once online to cache it.')); return; }
 
   // A late load could land after the user tabbed away — don't paint over them.
   if (!isTargetsRoute()) return;
@@ -130,7 +130,7 @@ function isTargetsRoute() {
 function controls(f, inst, nav, paint) {
   const fov = fovOf(inst);
   const chip = (label, active, on) =>
-    el('button.chip', { class: active ? 'active' : '', onclick: on }, label);
+    el('button.chip', { class: active ? 'active' : '', 'aria-pressed': active ? 'true' : 'false', onclick: on }, label);
 
   const catRow = el('div.chip-row', {}, CATEGORIES.map((c) =>
     chip(c, f.categories.has(c), () => { toggle(f.categories, c); nav.rerender(); })));
@@ -146,6 +146,7 @@ function controls(f, inst, nav, paint) {
 
   const search = el('input.search', {
     type: 'search', placeholder: 'Search name, common name, or M#…', value: f.query,
+    'aria-label': 'Search targets by name, common name, or Messier number',
     oninput: (e) => { f.query = e.target.value; paint(); }, // in-place: keeps focus
   });
 
@@ -186,8 +187,18 @@ function row(o) {
   return el('div.target-row', {}, [
     el('button.fav', {
       class: fav ? 'on' : '', title: fav ? 'Remove favourite' : 'Add favourite',
-      'aria-label': fav ? 'Remove favourite' : 'Add favourite',
-      onclick: (e) => { toggleFavorite(o.id); const b = e.currentTarget; const on = b.classList.toggle('on'); b.textContent = on ? '★' : '☆'; },
+      'aria-label': fav ? 'Remove favourite' : 'Add favourite', 'aria-pressed': fav ? 'true' : 'false',
+      onclick: (e) => {
+        const on = toggleFavorite(o.id);
+        const b = e.currentTarget;
+        b.classList.toggle('on', on);
+        b.textContent = on ? '★' : '☆';
+        // Refresh the accessible state in place — this button mutates without a
+        // re-render, so the label/pressed state must be updated by hand.
+        const label = on ? 'Remove favourite' : 'Add favourite';
+        b.title = label; b.setAttribute('aria-label', label);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      },
     }, fav ? '★' : '☆'),
     el('div.target-main', {}, [
       el('div.target-name', {}, [

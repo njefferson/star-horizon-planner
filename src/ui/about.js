@@ -56,7 +56,7 @@ export function mountAbout() {
 
 function openAbout() {
   document.querySelector('.about-dialog')?.remove();
-  const dlg = el('dialog.about-dialog', {}, [
+  const dlg = el('dialog.about-dialog', { 'aria-label': 'About Horizon Planner' }, [
     el('div.about-body', { html: ABOUT_HTML }),
     el('div.about-foot', {}, [
       el('button.btn.ghost', { onclick: () => dlg.close() }, 'Close'),

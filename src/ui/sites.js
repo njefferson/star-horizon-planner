@@ -64,6 +64,8 @@ function siteRow(site, isActive, nav) {
     el('button.site-main', {
       onclick: () => { if (!isActive) { setActiveSite(site.id); nav.rerender(); } },
       title: isActive ? 'Active site' : 'Make active',
+      'aria-current': isActive ? 'true' : null,
+      'aria-label': isActive ? `${site.name} (active site)` : `Make ${site.name} the active site`,
     }, [
       el('div.site-name', {}, [
         el('span', {}, site.name),
@@ -93,8 +95,8 @@ function openSiteForm(nav, site = null) {
     else toast('Location unavailable.');
   } }, 'Use my location');
 
-  const dlg = el('dialog.loc-dialog', {}, [
-    el('h2', {}, site ? 'Edit site' : 'Add site'),
+  const dlg = el('dialog.loc-dialog', { 'aria-labelledby': 'site-form-title' }, [
+    el('h2', { id: 'site-form-title' }, site ? 'Edit site' : 'Add site'),
     el('div.loc-grid', {}, [
       labeled('Name', name), labeled('Latitude', lat), labeled('Longitude', lon),
       el('div', {}, geoBtn),
@@ -130,12 +132,16 @@ function exportBackup() {
 
 function openImport(nav) {
   document.querySelector('.loc-dialog')?.remove();
-  const ta = el('textarea.hz-import', { placeholder: 'Paste a backup file’s contents, or choose a file above.', rows: 6 });
-  const file = el('input', { type: 'file', accept: '.json,application/json', onchange: async (e) => {
-    const f = e.target.files[0]; if (f) ta.value = await f.text();
-  } });
-  const dlg = el('dialog.loc-dialog', {}, [
-    el('h2', {}, 'Import backup'),
+  const ta = el('textarea.hz-import', {
+    placeholder: 'Paste a backup file’s contents, or choose a file above.', rows: 6,
+    'aria-label': 'Backup file contents (JSON)',
+  });
+  const file = el('input', {
+    type: 'file', accept: '.json,application/json', 'aria-label': 'Choose a backup file',
+    onchange: async (e) => { const f = e.target.files[0]; if (f) ta.value = await f.text(); },
+  });
+  const dlg = el('dialog.loc-dialog', { 'aria-labelledby': 'import-backup-title' }, [
+    el('h2', { id: 'import-backup-title' }, 'Import backup'),
     el('p.dim.small', {}, 'This replaces your current sites, favourites and custom scopes.'),
     el('div.loc-grid', {}, [file, ta]),
     el('div.hz-dialog-foot', {}, [

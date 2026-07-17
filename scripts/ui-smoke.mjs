@@ -100,6 +100,8 @@ await step('boot: 6 tabs, Tonight shows the no-site gate (honest first run)', as
   // repeat(N, 1fr) wraps the last tab onto a second, clipped row.
   const rows = await page.$$eval('.tab', (els) => new Set(els.map((e) => e.getBoundingClientRect().top)).size);
   ok(rows === 1, `all tabs on one dock row (got ${rows} rows)`);
+  // Exactly one tab marks itself the current page for assistive tech.
+  ok(await page.$$eval('.tab[aria-current="page"]', (e) => e.length) === 1, 'active tab has aria-current="page"');
   await page.waitForSelector('.dead-end');
   const gate = await page.$eval('.dead-end h2', (e) => e.textContent);
   ok(/observing site/i.test(gate), `Tonight gate says: ${gate}`);
@@ -126,10 +128,12 @@ await step('horizon editor: 36 handles; keyboard nudge writes through', async ()
   await tab('Horizon');
   await page.waitForSelector('.hz-handle');
   ok(await page.$$eval('.hz-handle', (e) => e.length) === 36, '36 draggable rows');
+  ok(await page.$eval('.hz-handle[data-i="0"]', (e) => e.getAttribute('role')) === 'slider', 'handles are ARIA sliders');
   await page.focus('.hz-handle[data-i="0"]');
   for (let k = 0; k < 3; k++) await page.keyboard.press('ArrowUp');
   const readout = await page.$eval('.hz-readout', (e) => e.textContent);
   ok(/0° · 3°/.test(readout), `readout after 3 nudges: ${readout}`);
+  ok(await page.$eval('.hz-handle[data-i="0"]', (e) => e.getAttribute('aria-valuenow')) === '3', 'slider exposes aria-valuenow=3');
 });
 
 await step('horizon editor: Stellarium import (keeps the file\'s density)', async () => {
@@ -188,6 +192,7 @@ await step('targets: search the catalog and favourite M42', async () => {
   await page.waitForSelector('.target-row'); // list repaints in place
   await page.click('.target-row .fav');
   ok(await page.$('.target-row .fav.on') !== null, 'favourite toggled on');
+  ok(await page.$eval('.target-row .fav.on', (e) => e.getAttribute('aria-pressed')) === 'true', 'favourite aria-pressed tracks state in place');
 });
 
 await step('tonight: canvas paints, visibility row + effective window language', async () => {

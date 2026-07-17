@@ -41,6 +41,12 @@
 }
 
 * { box-sizing: border-box; }
+/* Honour reduced-motion (accessibility standing order): no slides/fades/nudges
+   for anyone who's asked the OS to calm animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  .btn:active, .toast-action:active, .about-btn:active, .theme-btn:active { transform: none; }
+}
 html, body { margin: 0; background: var(--bg); color: var(--ink);
   font-family: var(--sans); font-size: 15px; line-height: 1.45; }
 /* No element may push the page wider than the viewport — a single overflowing
@@ -97,6 +103,9 @@ a { color: var(--accent); }
 .tab { background: none; border: 0; color: var(--tab-ink); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-size: 11px; }
 .tab.active { color: var(--tab-ink-active); }
+/* The dock clips overflow, so a default outline ring would be cut off — use an
+   inset ring that stays inside the tab. */
+.tab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--tab-ink-active); border-radius: 10px; }
 .tab-icon { display: flex; align-items: center; justify-content: center; line-height: 0; }
 
 /* Floating corner buttons hug the content column on wide screens, fall back to
@@ -154,7 +163,7 @@ a { color: var(--accent); }
 .target-list { display: flex; flex-direction: column; gap: 6px; }
 .target-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-.fav { flex: 0 0 auto; width: 30px; height: 30px; border: 0; background: none; cursor: pointer;
+.fav { flex: 0 0 auto; width: 40px; height: 40px; border: 0; background: none; cursor: pointer;
   color: var(--dim); font-size: 18px; line-height: 1; border-radius: 8px; }
 .fav.on { color: var(--accent); }
 .target-main { flex: 1 1 auto; min-width: 0; }

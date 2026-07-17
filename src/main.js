@@ -52,25 +52,42 @@ const TABS = [
 
 function renderTabs() {
   const h = location.hash || '#/';
-  tabsRoot.replaceChildren(...TABS.map((t) =>
-    el('button.tab', {
-      class: h === t.hash ? 'active' : '',
+  tabsRoot.replaceChildren(...TABS.map((t) => {
+    const active = h === t.hash || (t.hash === '#/' && !TABS.some((x) => x.hash !== '#/' && h.startsWith(x.hash)));
+    return el('button.tab', {
+      class: active ? 'active' : '',
+      // aria-current marks the active view for screen readers (colour + the
+      // active class alone don't convey "you are here").
+      'aria-current': active ? 'page' : null,
       onclick: () => nav.go(t.hash),
-    }, [el('span.tab-icon', { html: t.icon }), el('span.tab-label', {}, t.label)])));
+    }, [el('span.tab-icon', { html: t.icon }), el('span.tab-label', {}, t.label)]);
+  }));
+}
+
+// After a tab navigation, move focus to the new view's heading so keyboard and
+// screen-reader users land in the content (not left on the old tab). Skipped on
+// first paint — booting shouldn't steal focus.
+let booted = false;
+function focusHeading() {
+  if (!booted) return;
+  const h1 = app.querySelector('h1');
+  if (h1) { h1.setAttribute('tabindex', '-1'); h1.focus({ preventScroll: true }); }
 }
 
 function render() {
   const h = location.hash || '#/';
   renderTabs();
   window.scrollTo(0, 0);
-  // Live views own their rendering into `app`.
-  if (h.startsWith('#/targets')) return renderTargets(app, state, nav);
-  if (h.startsWith('#/capture')) return renderCapture(app, state, nav); // sub-view of Horizon, no tab
-  if (h.startsWith('#/horizon')) return renderHorizonEditor(app, state, nav);
-  if (h.startsWith('#/polar')) return renderPolar(app, state, nav);
-  if (h.startsWith('#/sites')) return renderSites(app, state, nav);
-  if (h.startsWith('#/settings')) return renderSettings(app, state, nav);
-  return renderTonight(app, state, nav); // '#/' and anything else
+  // Live views own their rendering into `app`. Focus the heading afterwards;
+  // async views (Tonight, Targets) focus once their first paint lands.
+  const done = (p) => { if (p && typeof p.then === 'function') p.then(focusHeading); else focusHeading(); };
+  if (h.startsWith('#/targets')) return done(renderTargets(app, state, nav));
+  if (h.startsWith('#/capture')) return done(renderCapture(app, state, nav)); // sub-view of Horizon, no tab
+  if (h.startsWith('#/horizon')) return done(renderHorizonEditor(app, state, nav));
+  if (h.startsWith('#/polar')) return done(renderPolar(app, state, nav));
+  if (h.startsWith('#/sites')) return done(renderSites(app, state, nav));
+  if (h.startsWith('#/settings')) return done(renderSettings(app, state, nav));
+  return done(renderTonight(app, state, nav)); // '#/' and anything else
 }
 
 window.addEventListener('hashchange', render);
@@ -80,6 +97,7 @@ window.addEventListener('hashchange', render);
   mountAbout();        // floating "about" button, available everywhere
   mountThemeToggle();  // floating moon/sun Night Mode toggle, everywhere
   render();
+  booted = true;       // subsequent navigations move focus to the view heading
   // Existing data (sites/horizons predating this call) deserves protection
   // from storage eviction too — new writes re-request it in model/sites.js.
   if (loadSites().length) requestPersistence();
