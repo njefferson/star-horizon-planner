@@ -140,13 +140,21 @@ export function renderHorizonEditor(app, state, nav) {
   const endDrag = () => { dragging = null; };
   svg.addEventListener('pointerup', endDrag);
   svg.addEventListener('pointercancel', endDrag);
-  // Keyboard nudge for accessibility.
+  // Keyboard slider (ARIA slider pattern): Up/Down nudge altitude ±1° (PageUp/
+  // Down ±10°, Home/End 90/0°); Left/Right move focus between the 36 azimuth
+  // points so you don't have to Tab through all of them.
   svg.addEventListener('keydown', (e) => {
     const i = Number(e.target.dataset?.i);
     if (Number.isNaN(i)) return;
     const cur = sampleAt(profile, azForIndex(i));
-    if (e.key === 'ArrowUp') { apply(i, cur + 1); e.preventDefault(); }
-    else if (e.key === 'ArrowDown') { apply(i, cur - 1); e.preventDefault(); }
+    const alt = { ArrowUp: cur + 1, ArrowDown: cur - 1, PageUp: cur + 10, PageDown: cur - 10, Home: 90, End: 0 };
+    if (e.key in alt) { apply(i, alt[e.key]); e.preventDefault(); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const j = ((i + (e.key === 'ArrowRight' ? 1 : -1)) % N + N) % N;
+      handles[j].focus();
+      readout.textContent = `${azForIndex(j)}° · ${sampleAt(profile, azForIndex(j)).toFixed(0)}°`;
+      e.preventDefault();
+    }
   });
 
   // Header + actions --------------------------------------------------------

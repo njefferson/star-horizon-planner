@@ -132,16 +132,20 @@ function controls(f, inst, nav, paint) {
   const chip = (label, active, on) =>
     el('button.chip', { class: active ? 'active' : '', 'aria-pressed': active ? 'true' : 'false', onclick: on }, label);
 
-  const catRow = el('div.chip-row', {}, CATEGORIES.map((c) =>
+  // role=group + aria-label gives each chip set spoken context ("Object type,
+  // Galaxy, toggle button") instead of a bare "Galaxy".
+  const chipRow = (label, kids) => el('div.chip-row', { role: 'group', 'aria-label': label }, kids);
+
+  const catRow = chipRow('Object type', CATEGORIES.map((c) =>
     chip(c, f.categories.has(c), () => { toggle(f.categories, c); nav.rerender(); })));
 
-  const fitRow = el('div.chip-row', {}, [
+  const fitRow = chipRow('Framing', [
     chip('All', f.fit === 'any', () => { f.fit = 'any'; nav.rerender(); }),
     chip('Fits', f.fit === 'fits', () => { f.fit = 'fits'; nav.rerender(); }),
     chip('Mosaic', f.fit === 'mosaic', () => { f.fit = 'mosaic'; nav.rerender(); }),
   ]);
 
-  const sizeRow = el('div.chip-row', {}, Object.keys(SIZE_BANDS).map((b) =>
+  const sizeRow = chipRow('Size', Object.keys(SIZE_BANDS).map((b) =>
     chip(b === 'any' ? 'Any size' : b, f.sizeBand === b, () => { f.sizeBand = b; nav.rerender(); })));
 
   const search = el('input.search', {

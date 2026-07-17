@@ -54,6 +54,7 @@ export function renderCapture(app, state, nav) {
     el('div.pa-head', {}, [
       el('h1', {}, 'Measure horizon'),
       el('p.dim.small', {}, 'Hold the phone upright and point the back camera at the treeline, the way you’d photograph it. Tip it up for a tall obstruction, down for a downhill horizon — the altitude readout follows where the camera looks.'),
+      el('p.dim.small', {}, 'This is a camera-aiming task. If you can’t sight it visually, set your horizon in the Horizon editor (drag or arrow keys) or import a Stellarium file — both reach the same result.'),
       el('div.row-actions', {}, [el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${site.name} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${site.name}`)])]),
     ]),

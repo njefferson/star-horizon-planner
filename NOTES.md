@@ -48,14 +48,21 @@ Accessibility outranks features. These are FAIL STATES, not style preferences:
   `node scripts/check-contrast.mjs` in CI; a token change that fails does not
   merge. New color pairs get added to that script's pair list, not waved past.
 - **A pointer-only interaction.** Every interaction has a keyboard path and a
-  visible focus indicator. (The night-graph scrub is tolerated only because
-  the visibility table carries the same data in text.)
+  visible focus indicator — including the night-graph scrub (a focusable
+  slider: arrows / PageUp-Dn / Home-End) and the horizon points (ARIA sliders).
+- **Focus thrown or lost on a repaint.** An in-view state change (toggling a
+  chip, stepping the date) must NOT move focus to the heading or `<body>`;
+  `nav.rerender()` restores focus to the triggering control by accessible name.
+  Focus only moves to the `<h1>` on an actual view navigation.
 - **Silent async feedback.** Toasts and discrete readouts announce via
   aria-live/role=status. Continuous 60 Hz streams stay silent BY DESIGN —
   announcing them is its own accessibility failure; give them a textual
   summary instead.
-- **Disabled zoom, ignored motion preferences.** The viewport stays zoomable;
-  `prefers-reduced-motion` is honored.
+- **Disabled zoom, ignored motion preferences, invisible focus under
+  forced-colors.** The viewport stays zoomable; `prefers-reduced-motion` is
+  honored; focus rings and selected-state cues survive Windows High Contrast /
+  `forced-colors` (never box-shadow/colour alone — a `@media (forced-colors:
+  active)` block restores outlines).
 Design gate: **every build-order step in this file names its accessibility
 consideration before code is written**, and the Verification gates below run
 per step. Screen-reader spot checks (VoiceOver on the iPad) join the

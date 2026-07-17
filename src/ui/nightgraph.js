@@ -382,7 +382,9 @@ function visibilitySection(series, observer, profile, win, instrument) {
     const v = visibility({ ra: s.target.ra, dec: s.target.dec }, observer, profile,
       { start: win.start, end: win.end, instrument });
     const eff = v.effective.map(fmtIv).join(', ');
-    const geo = v.geometric.length ? `${fmtIv(v.geometric[0], v.geometric)} up` : 'never up';
+    // Show every geometric interval (a target up in two chunks reads as both),
+    // not just the first.
+    const geo = v.geometric.length ? `${v.geometric.map(fmtIv).join(', ')} up` : 'never up';
     const flags = [];
     if (v.clipsDeadZone) flags.push('clips zenith');
     if (!isFlat(profile) && v.effective.length && v.geometric.length &&
@@ -414,7 +416,7 @@ function visibilitySection(series, observer, profile, win, instrument) {
         el('div.vis-name', {}, shortName(s.target)),
         el('div.vis-sub', {}, [
           el('span.dim', {}, geo),
-          v.transit ? el('span.dim', {}, ` · peak ${v.transit.altitude.toFixed(0)}°`) : null,
+          v.transit ? el('span.dim', {}, ` · peak ${v.transit.altitude.toFixed(0)}° at ${hm(v.transit.time)}`) : null,
           ...flags.map((f) => el('span.vis-flag', {}, f)),
           moonChip,
         ]),

@@ -25,6 +25,9 @@
   },
   "author": "Noah Jefferson",
   "license": "PolyForm-Noncommercial-1.0.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test",
     "test:contrast": "node scripts/check-contrast.mjs",
