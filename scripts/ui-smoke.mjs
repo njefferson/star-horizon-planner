@@ -90,12 +90,12 @@ const tab = (label) => page.click(`.tab:has-text("${label}")`);
 const shot = async (name) => { if (SHOTS) await page.screenshot({ path: join(SHOTS, name) }); };
 
 // --- the journey ---------------------------------------------------------------
-await step('boot: 5 tabs, Tonight shows the no-site gate (honest first run)', async () => {
+await step('boot: 6 tabs, Tonight shows the no-site gate (honest first run)', async () => {
   // domcontentloaded: the window 'load' event hangs on the external font
   // <link> in offline sandboxes; the app itself is fully local.
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.tab');
-  ok(await page.$$eval('.tab', (e) => e.length) === 5, 'expected 5 tabs');
+  ok(await page.$$eval('.tab', (e) => e.length) === 6, 'expected 6 tabs');
   await page.waitForSelector('.dead-end');
   const gate = await page.$eval('.dead-end h2', (e) => e.textContent);
   ok(/observing site/i.test(gate), `Tonight gate says: ${gate}`);
@@ -183,6 +183,15 @@ await step('settings: custom scope — live FOV preview, save, active, remove', 
   await page.click('.inst-card.active .btn.danger'); // confirm auto-accepted
   await page.waitForSelector('.inst-card:nth-child(3)', { state: 'detached' });
   ok(/Seestar S50/.test(await page.$eval('.inst-card.active', (e) => e.textContent)), 'falls back to the S50');
+});
+
+await step('polar align: aim card renders from the site, horizon-aware', async () => {
+  await tab('Polar');
+  await page.waitForSelector('.pa-card');
+  const text = await page.$eval('#app', (e) => e.textContent);
+  ok(/Polaris/.test(text), 'names the pole star for a northern site');
+  ok(/Where to aim/.test(text), 'aim card present');
+  await shot('polar.png');
 });
 
 await step('about: credits visible, scaffold copy gone', async () => {

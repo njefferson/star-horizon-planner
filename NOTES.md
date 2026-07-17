@@ -85,10 +85,11 @@ index.html  sw.js  manifest.webmanifest  icon.svg  apple-touch-icon.png
 src/
   main.js                     bootstrap, state, hash routing, SW register
   styles.css                  :root tokens + [data-theme="dark"]
-  ui/  dom.js                 (copied) + nightgraph.js horizoneditor.js
+  ui/  dom.js                 (copied) + nightgraph.js horizoneditor.js polar.js
        sites.js targets.js settings.js theme.js about.js
   model/ astro.js             astronomy-engine wrappers: alt/az(t), sun/moon, twilight
          night.js             night window (dusk→dawn) + twilight sampling
+         polar.js             horizon-aware polar alignment (NCP/SCP, reticle clock)
          horizon.js           profile model + Stellarium import/export + sample-at-az
          visibility.js        curve ∩ horizon → effective windows (+ geometric)
          instruments.js       FOV/mosaic model + custom-scope registry; active = horizon.instrument
@@ -166,8 +167,12 @@ Lands on `staging` — the on-device gate v1 skipped; USE IT from now on
       is precious data in evictable storage)
 - [x] Headless-Chromium smoke script (`scripts/ui-smoke.mjs`) — first cut at
       the UI-test gap
+- [x] **Step 8 Polar Align merged in** — built in a parallel session on
+      `staging` (model/polar.js + horizon-aware Polar tab + tests, both
+      hemispheres); exactly the review's "ship the computable half early".
+      The live "point to the pole" aid still waits for the capture stack.
 - [ ] On-device NEEDS-HIS-HANDS pass on staging: PWA install, offline, iPad
-      drag feel, first-run journey
+      drag feel, first-run journey (now incl. Polar + custom-scope UI)
 Deliberately NOT settled here: horizon storage resolution (36 rows vs
 arbitrary az points, negative altitudes for hilltop sites) — decide at the top
 of the sensor-capture feature, before profiles bake in.
