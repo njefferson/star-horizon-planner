@@ -1,0 +1,39 @@
+# Manual release tagging. The deploy pipeline's git remote only accepts branch
+# pushes (tag pushes 403), so version tags are minted here instead: dispatch on
+# main after a promote and it tags the current tip as v<package.json version>
+# (or an explicit tag input) and opens a matching GitHub Release. Idempotent —
+# an existing release/tag is left alone.
+name: Tag release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create (blank = v<package.json version>)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create tag + release at this ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="v$(node -p "require('./package.json').version")"; fi
+          echo "tagging $GITHUB_SHA as $TAG"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $TAG already exists — nothing to do"
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --notes "See the Releases section of NOTES.md for what shipped."
