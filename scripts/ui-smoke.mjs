@@ -80,7 +80,7 @@ page.on('console', (m) => {
   // placeholder on error). Everything else is a real error.
   const t = m.text();
   const at = `${m.location()?.url || ''} ${t}`;
-  const external = /fonts\.g(oogleapis|static)\.com|alasky\.u-strasbg\.fr|hips2fits/.test(at);
+  const external = /fonts\.g(oogleapis|static)\.com|alasky\.u-strasbg\.fr|hips2fits|wikipedia\.org/.test(at);
   if (m.type() === 'error' && !external) pageErrors.push(t);
 });
 page.on('dialog', (d) => d.accept()); // confirm() on remove/reset
@@ -256,8 +256,10 @@ await step('target details: a row thumbnail opens the details page and back retu
   await page.click('.target-row .target-thumb');
   await page.waitForSelector('.td-facts');
   const facts = await page.$eval('.td-facts', (e) => e.textContent);
-  ok(/Magnitude/.test(facts) && /Framing/.test(facts), `details facts render: ${/Magnitude/.test(facts)}`);
+  ok(/RA/.test(facts) && /Dec/.test(facts), `coordinates render (RA/Dec): ${facts.replace(/\s+/g, ' ').slice(0, 60)}`);
   ok(await page.$('.td-image, .td-image.broken') !== null, 'representative image area present (image or offline placeholder)');
+  ok(await page.$('.td-curve') !== null, 'tonight altitude curve renders');
+  ok(await page.$('.td-cta .btn.block') !== null, 'prominent primary CTA present');
   await page.click('.td-head .btn:has-text("Targets")');
   await page.waitForSelector('.target-row');
   ok(true, 'back to the Targets list');
