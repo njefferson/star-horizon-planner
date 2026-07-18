@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v25'; // app v2.0.1 — AR sky view: fix iOS azimuth flip when pitched past ~45° (derive pointing from full device orientation, anchor true north from the compass only when near level)
+const CACHE = 'horizon-v26'; // app v2.0.2 — new brand art: star-over-conifer-treeline masters in art/, rasters derived by gen-assets.mjs, icon.svg rebuilt to match
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

@@ -482,6 +482,34 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.0.2 — 2026-07-18** (SW cache `horizon-v26`). **New brand art.** AI-generated
+  from the brand brief and approved by Noah: glowing gold star over a conifer
+  treeline. High-res masters committed under `art/` (never deployed);
+  `scripts/gen-assets.mjs` now derives every shipped raster from them
+  (icon-512/192, apple-touch-icon 180, og-image 1200×630 with the wordmark +
+  tagline baked in), and `icon.svg` (favicon + manifest SVG) was rebuilt by hand
+  as a vector rendition of the same scene. Reminder: the GitHub social-preview
+  image is a manual upload (Settings → Social preview).
+- **v2.0.1 — 2026-07-18** (SW cache `horizon-v25`). **AR pointing fix** from the
+  device pass: on iOS the sky flipped ~180° in azimuth once the phone pitched
+  past ~45°, because azimuth came straight from `webkitCompassHeading` (only
+  trustworthy near level). New `model/capture.js backCameraAzAlt(α,β,γ)` derives
+  the camera axis from the full W3C orientation matrix — azimuth is invariant
+  under pitch — and iOS uses the compass ONLY as a near-level north anchor
+  (|alt| ≤ 35°), held through steep tilts. No-flip regression in unit + smoke.
+  118 unit, 50 contrast, 20 smoke, 0 axe (30 scans).
+- **v2.0.0 — 2026-07-18** (SW cache `horizon-v24`; v23 was the staging interim).
+  **The declared major: AR "arcs across the sky"** (`ui/sky.js`,
+  `model/skyview.js`, shared `ui/marks.js`) — point the phone at the sky and
+  every favourite + the Moon (with live phase glyph) sits at its position with
+  its whole-night arc drawn over the camera, cut by the measured horizon exactly
+  as Tonight cuts curves (`aboveHorizonSegments` over `isAbove`); hour scrubber
+  (native range, keyboard path); aria-live text list mirrors the overlay; flat
+  az/alt chart fallback for desktop/no-camera (what the headless gates render).
+  New `astro.js moonCurve()`. Device-pass polish folded in: full-width "View in
+  sky" hero CTA on Tonight, on-camera "Turn on compass" overlay cue, notices
+  moved above the viewfinder. Reached from Tonight (no 7th tab). 114 unit,
+  50 contrast, 20 smoke, 0 axe (30 scans).
 - **v1.2.0 — 2026-07-18** (SW cache `horizon-v22`). The second on-device pass —
   a wave of features + fixes iterated live from Noah's phone. **Live-camera AR
   capture** (`ui/livecapture.js` + `model/arproject.js`): back-camera viewfinder,
