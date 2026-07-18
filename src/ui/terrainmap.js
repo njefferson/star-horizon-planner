@@ -194,7 +194,7 @@ async function runTrace(nav) {
     saveSiteHorizon(site.id, serializeHorizon(profile));
     tm.site = activeSite(); // re-read: keep the in-view copy current
 
-    drawRing(traced.points);
+    drawTraceOverlay(traced.points);
     const top = traced.points.reduce((a, b) => (b.alt > a.alt ? b : a));
     const summary = root.querySelector('#tm-summary');
     if (summary) {
@@ -222,15 +222,21 @@ function setProgress(frac) {
   n.textContent = frac == null ? '' : `sampling elevations ${Math.round(frac * 100)}%`;
 }
 
-// The horizon ring: each ray's blocking point, joined — you can SEE where the
-// horizon comes from. Decorative (the summary + editor carry the data).
-function drawRing(points) {
+// The trace, drawn: 36 thin RAYS from the site to each direction's blocking
+// point, and the heavier RING joining all their ends (Noah's ask) — a radar
+// sweep that shows each sightline and where it terminates. Decorative (the
+// summary + editor carry the data).
+function drawTraceOverlay(points) {
   if (!tm || !tm.map || !tm.L) return;
   if (tm.ring) tm.map.removeLayer(tm.ring);
+  const here = [tm.site.lat, tm.site.lon];
+  const rays = points.map((p) => tm.L.polyline([here, [p.lat, p.lon]], {
+    color: '#ffd166', weight: 1, opacity: 0.5,
+  }));
   const latlngs = points.map((p) => [p.lat, p.lon]);
   const casing = tm.L.polygon(latlngs, { color: '#0b0e17', weight: 4, opacity: 0.55, fill: false });
   const line = tm.L.polygon(latlngs, { color: '#ffd166', weight: 2, opacity: 0.95, fill: false });
-  tm.ring = tm.L.layerGroup([casing, line]).addTo(tm.map);
+  tm.ring = tm.L.layerGroup([...rays, casing, line]).addTo(tm.map);
   // animate:false — an in-flight zoom animation outliving a fast navigation
   // away is the other classic _leaflet_pos crash.
   tm.map.fitBounds(line.getBounds(), { padding: [20, 20], animate: false });

@@ -494,6 +494,14 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.8.0 — 2026-07-18** (SW cache `horizon-v38`). **Trace rays drawn**
+  (Noah's ask): the map overlay now shows all 36 thin gold rays from the
+  site to each direction's blocking point, under the heavier ring that
+  passes through their ends — a radar sweep showing every sightline and
+  where it terminates. One layerGroup; overlay stays decorative (summary
+  line is the text channel); no new tokens/contrast pairs. Smoke asserts
+  ≥37 overlay paths; screenshot eyeballed. 157 unit, 50 contrast, 24 smoke,
+  0 axe (34 scans).
 - **v2.7.1 — 2026-07-18** (SW cache `horizon-v37`). **Trace elevation calls:
   resilience + honest diagnostics.** Device pass: the v2.7.0 trace failed
   ("elevation service unreachable") while tiles + the single-point elevation

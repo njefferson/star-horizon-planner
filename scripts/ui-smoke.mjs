@@ -236,7 +236,7 @@ await step('terrain: 360° trace applies the horizon; map tap creates a site', a
   await page.waitForFunction(() => /Terrain horizon applied/.test(document.querySelector('#tm-status')?.textContent || ''), null, { timeout: 20000 });
   const summary = await page.$eval('#tm-summary', (e) => e.textContent);
   ok(/Tallest terrain 6\.\d° at az 180°/.test(summary), `trace summary: ${summary}`);
-  ok((await page.$$('.leaflet-overlay-pane path')).length >= 1, 'horizon ring drawn on the map');
+  ok((await page.$$('.leaflet-overlay-pane path')).length >= 37, '36 trace rays + the ring through their ends drawn on the map');
   await shot('terrain-trace.png');
 
   // Map tap → a NEW SITE (the map's remaining pointer job); non-pointer site

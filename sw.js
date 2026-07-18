@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v37'; // app v2.7.1 — trace elevation calls: 50-coord batches, backoff retries, paced; failures name their cause
+const CACHE = 'horizon-v38'; // app v2.8.0 — trace visualization: 36 rays from the site + the ring through their ends
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',
