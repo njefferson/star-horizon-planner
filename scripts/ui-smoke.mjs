@@ -342,12 +342,16 @@ await step('sky (AR): "View in sky" opens #/sky; camera overlay, Moon in the lis
     navigator.mediaDevices.getUserMedia = async () => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; return c.captureStream(1); };
   });
   await tab('Tonight');
-  await page.waitForSelector('.ng-sky');
-  await page.click('.ng-sky'); // the "View in sky" button on Tonight
+  await page.waitForSelector('.ng-sky-hero');
+  await page.click('.ng-sky-hero'); // the premier "View in sky" hero on Tonight
   await page.waitForFunction(() => location.hash.startsWith('#/sky'));
   await page.waitForSelector('.lc-stage');
   await page.waitForSelector('.lc-canvas'); // AR overlay canvas (not the flat fallback)
   ok(!(await page.$('.sky-flat')), 'camera path taken (AR overlay, not the flat chart)');
+
+  // Before any compass fix, the on-camera "turn on compass" cue is visible over
+  // the viewfinder (the on-device gap Noah hit).
+  ok(await page.$eval('#sky-cta', (e) => !e.hidden), 'compass cue shown while pointing with no compass fix');
 
   // The Moon is always listed (Noah's requirement), with its phase; M42 was
   // favourited earlier, so a favourite target is listed too. The list is the
@@ -357,11 +361,14 @@ await step('sky (AR): "View in sky" opens #/sky; camera overlay, Moon in the lis
   ok((await page.$$('.sky-li')).length >= 1, 'at least one object row in the sky list');
 
   // Feed a synthetic Android orientation so the camera axis reads, then confirm
-  // the live (silent, non-aria-live) az/alt readout formats.
+  // the live (silent, non-aria-live) az/alt readout formats — and the compass
+  // cue dismisses now that the sky has locked on.
   await page.evaluate(() => window.dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute', { alpha: 180, beta: 135, gamma: 0, absolute: true })));
   await page.waitForFunction(() => /pointing az \d+°/.test(document.querySelector('#sky-readout')?.textContent || ''));
   const readout = await page.$eval('#sky-readout', (e) => e.textContent);
   ok(/pointing az \d+° · alt -?\d+°/.test(readout), `live pointing readout present: ${readout}`);
+  await page.waitForFunction(() => document.querySelector('#sky-cta')?.hidden === true);
+  ok(await page.$eval('#sky-cta', (e) => e.hidden), 'compass cue hidden once the sky locks on');
 
   // Hour scrubber is a native range with a keyboard path; arrow steps advance
   // the clock and its aria-valuetext.

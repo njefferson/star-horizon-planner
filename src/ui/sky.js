@@ -113,6 +113,25 @@ function buildShell(app, site, nav, targetCount) {
     }, [el('span', { 'aria-hidden': 'true' }, `📍 ${site.name}`)])]),
   ]);
 
+  // Actionable notices live ABOVE the stage so they're never hidden under the
+  // tall viewfinder (a phone-only trap when they sat in the controls below).
+  const notices = el('div.sky-notices', {}, [
+    targetCount === 0
+      ? el('div.sky-notice', { role: 'status' }, [
+          el('span', {}, '⭐ No favourites yet — only the Moon shows. '),
+          el('button.linklike', { onclick: () => { stopSky(); nav.go('#/targets'); } }, 'Star some targets'),
+          el('span', {}, ' to see them arc across your sky.'),
+        ])
+      : null,
+    isFlat(sv.profile)
+      ? el('div.sky-notice', { role: 'status' }, [
+          el('span', {}, '📐 Flat horizon — arcs aren’t cut by a treeline yet. '),
+          el('button.linklike', { onclick: () => { stopSky(); nav.go('#/capture/live'); } }, 'Measure your horizon'),
+          el('span', {}, '.'),
+        ])
+      : null,
+  ]);
+
   const stage = el('div.lc-stage', { id: 'sky-stage' });
 
   // Hour scrubber — a native range (keyboard-accessible, visible focus). Its
@@ -135,18 +154,10 @@ function buildShell(app, site, nav, targetCount) {
   ]);
 
   const controls = el('div.lc-controls', {}, [
-    el('button.btn.primary.block', { id: 'sky-motion', hidden: true, onclick: enableMotion, 'aria-label': 'Enable compass and tilt' }, '🧭 Enable compass'),
     el('div.lc-btns', {}, [
       el('button.btn', { id: 'sky-mode', onclick: toggleMode }, '🗺 Flat view'),
     ]),
-    targetCount === 0
-      ? el('p.dim.small', {}, ['No favourites yet — only the Moon shows. ',
-          el('button.linklike', { onclick: () => { stopSky(); nav.go('#/targets'); } }, 'Star some targets'), ' to see them arc across your sky.'])
-      : el('p.dim.small', {}, 'Point at the sky: each favourite and the Moon sits at its live position, its arc traces the whole night. Scrub to step through the hours. Arcs show only where they clear your measured horizon.'),
-    isFlat(sv.profile)
-      ? el('p.dim.small', {}, ['Flat horizon — arcs aren’t cut by a treeline yet. ',
-          el('button.linklike', { onclick: () => { stopSky(); nav.go('#/capture/live'); } }, 'Measure your horizon'), '.'])
-      : null,
+    el('p.dim.small', {}, 'Point at the sky: each favourite and the Moon sits at its live position, its arc traces the whole night. Scrub to step through the hours. Arcs show only where they clear your measured horizon.'),
   ]);
 
   const list = el('ul.sky-list', { id: 'sky-list', 'aria-live': 'polite' });
@@ -155,7 +166,7 @@ function buildShell(app, site, nav, targetCount) {
     list,
   ]);
 
-  root.append(head, stage, scrub, controls, listSection);
+  root.append(head, notices, stage, scrub, controls, listSection);
   app.append(root);
   renderList();
 }
@@ -178,18 +189,27 @@ function enterMode(mode) {
     const video = el('video.lc-video', { autoplay: true, playsinline: true, muted: true, 'aria-hidden': 'true' });
     video.muted = true;
     const canvas = el('canvas.lc-canvas', { 'aria-hidden': 'true' });
+    // Prominent on-camera cue to turn the compass on — right over the viewfinder,
+    // not buried below it. Visible whenever we're pointing at the sky with no
+    // compass fix yet (sv.cam == null); the draw loop hides it once the sky locks.
+    const cta = el('div.sky-cta', { id: 'sky-cta' }, [
+      el('span.sky-cta-icon', { 'aria-hidden': 'true' }, '🧭'),
+      el('p.sky-cta-msg', {}, 'Turn on the compass so the sky lines up with your camera.'),
+      el('button.btn.primary', { id: 'sky-cta-btn', onclick: enableMotion, 'aria-label': 'Turn on compass and tilt sensors' }, '🧭 Turn on compass'),
+    ]);
     stage.append(
-      video, canvas,
+      video, canvas, cta,
       el('div.lc-readout.mono', { id: 'sky-readout' }, 'enabling camera…'),
       el('p.lc-hint.small', { id: 'sky-hint', role: 'status', 'aria-live': 'polite' }, ''),
     );
     sv.arCanvas = canvas;
     startCamera(video, canvas);
-    if (motionIsGated()) showMotionButton(true);
-    else { attachOrientation(); showMotionButton(false); }
+    // Non-gated platforms (Android/desktop) can attach immediately; iOS waits for
+    // the tap on the CTA so requestPermission() has a user gesture.
+    if (!motionIsGated()) attachOrientation();
+    toggleCta(!sv.cam);
   } else {
     stage.classList.add('sky-flat');
-    showMotionButton(false);
     const canvas = el('canvas.sky-flatcanvas', { role: 'img', 'aria-label': flatAriaLabel() });
     stage.append(canvas);
     sv.flatCanvas = canvas;
@@ -238,9 +258,11 @@ function motionIsGated() {
   return typeof DeviceOrientationEvent !== 'undefined' &&
     typeof DeviceOrientationEvent.requestPermission === 'function';
 }
-function showMotionButton(show) {
-  const b = root && root.querySelector('#sky-motion');
-  if (b) b.hidden = !show;
+// Show/hide the on-camera compass call-to-action. Driven by whether we have a
+// compass fix yet (sv.cam); the draw loop keeps it in sync every frame.
+function toggleCta(show) {
+  const c = root && root.querySelector('#sky-cta');
+  if (c) c.hidden = !show;
 }
 async function enableMotion() {
   try {
@@ -250,7 +272,6 @@ async function enableMotion() {
     }
   } catch { toast('Could not request compass access here.'); return; }
   attachOrientation();
-  showMotionButton(false);
   say('Compass on — point at the sky.');
 }
 function attachOrientation() {
@@ -344,12 +365,13 @@ function tickDraw(canvas) {
   if (!mounted() || !sv || sv.mode !== 'ar') return;
   drawAR(canvas);
   updateReadout();
+  toggleCta(!sv.cam); // show the compass cue until the sky locks on; hide once it does
   sv.raf = requestAnimationFrame(() => tickDraw(canvas));
 }
 function updateReadout() {
   const r = root && root.querySelector('#sky-readout');
   if (!r) return;
-  if (!sv.cam) { r.textContent = (motionIsGated() && !sv.oriAttached) ? 'tap “Enable compass”' : 'waiting for compass…'; return; }
+  if (!sv.cam) { r.textContent = 'waiting for compass…'; return; }
   const decl = `· true N (${sv.declination >= 0 ? '+' : ''}${sv.declination.toFixed(1)}° decl)`;
   r.textContent = `pointing az ${sv.cam.az.toFixed(0)}° · alt ${sv.cam.alt.toFixed(0)}° ${decl}`;
 }

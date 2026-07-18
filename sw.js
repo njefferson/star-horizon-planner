@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v23'; // app v2.0.0 — AR "arcs across the sky": #/sky live-camera overlay of favourites + the Moon with whole-night arcs cut by the measured horizon, hour scrubber, flat az/alt fallback
+const CACHE = 'horizon-v24'; // app v2.0.0 — AR "arcs across the sky": #/sky live-camera overlay of favourites + the Moon with whole-night arcs cut by the measured horizon, hour scrubber, flat az/alt fallback; device-pass polish: premier Tonight CTA, on-camera compass cue, notices above the viewfinder
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

@@ -68,6 +68,21 @@ export async function renderTonight(app, state, nav) {
   clear(app);
   app.append(header(state, nav, site, targets.length, favIds.size, previewing));
 
+  // The premier v2.0.0 feature — an unmissable full-width call-to-action at the
+  // top of Tonight, sitting below the header so the fixed corner buttons never
+  // overlap it. Leads straight into the AR arcs-across-the-sky view.
+  app.append(el('button.ng-sky-hero', {
+    onclick: () => nav.go('#/sky'),
+    'aria-label': 'View in sky — watch tonight’s targets arc across the sky in augmented reality',
+  }, [
+    el('span.ng-sky-hero-icon', { 'aria-hidden': 'true' }, '🔭'),
+    el('span.ng-sky-hero-text', {}, [
+      el('span.ng-sky-hero-title', {}, 'View in sky'),
+      el('span.ng-sky-hero-sub', {}, 'Watch tonight’s targets arc overhead'),
+    ]),
+    el('span.ng-sky-hero-arrow', { 'aria-hidden': 'true' }, '→'),
+  ]));
+
   // Without a measured horizon the curves can't be "cut" — everything above 0°
   // reads as clear, so there's nothing grey. Say so, and offer to fix it.
   if (isFlat(profile)) {
@@ -325,7 +340,6 @@ function header(state, nav, site, shown, favCount, previewing) {
       el('button.btn.small', { onclick: () => shiftNight(state, nav, -1), 'aria-label': 'Previous night' }, '‹ Prev'),
       el('button.btn.small', { onclick: () => { state.night = noonToday(); nav.rerender(); } }, nightLabel(state.night)),
       el('button.btn.small', { onclick: () => shiftNight(state, nav, +1), 'aria-label': 'Next night' }, 'Next ›'),
-      el('button.btn.small.ng-sky', { onclick: () => nav.go('#/sky'), 'aria-label': 'View tonight’s targets arcing across the sky' }, '🔭 View in sky'),
       el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
     ]),

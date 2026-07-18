@@ -71,6 +71,7 @@ function pairs(t, mode) {
     ['dim small text on bg2', t('dim'), t('bg2'), AA],
     ['dim small text on card', t('dim'), t('card'), AA],
     ['accent-ink on accent-wash (badges)', t('accent-ink'), t('accent-wash'), AA],
+    ['sky notice text on accent-wash', t('ink'), t('accent-wash'), AA],
     ['primary button ink on accent', '#12131c', t('accent'), AA],
     ['tab label on dock', t('tab-ink'), t('dock'), AA],
     ['active tab on dock', t('tab-ink-active'), t('dock'), AA],
