@@ -127,7 +127,14 @@ export function maybeWelcome(nav) {
   document.querySelector('.welcome-dialog')?.remove();
   const dlg = el('dialog.loc-dialog.welcome-dialog', { 'aria-labelledby': 'welcome-title' }, [
     el('h2', { id: 'welcome-title' }, 'Welcome — let’s find your sky'),
-    el('p', {}, 'Star Horizon Planner shows what’s up above you tonight, from your real location and horizon. First, where are you?'),
+    // The purpose, up front for new visitors (device ask, 2026-07-18); the
+    // ⓘ button keeps the full story available forever.
+    el('p', {}, [
+      'Every astronomy planner assumes a flat horizon — your yard has trees and hills. ',
+      el('strong', {}, 'Star Horizon Planner measures your real horizon'),
+      ' (from a map, your camera, or by hand) and plans tonight around what you can actually see. More any time under the ⓘ button.',
+    ]),
+    el('p', {}, 'First, where are you?'),
     el('p.dim.small', {}, 'Until you set it, the app uses a placeholder location (“Somewhere, USA”), so numbers won’t match your sky.'),
     el('div.welcome-actions', {}, [
       el('button.btn.primary.block', { onclick: () => { markSeen(); dlg.close(); useMyLocation(nav); } }, '📍 Use my location'),

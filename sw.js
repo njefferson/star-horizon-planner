@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v43'; // app v2.11.0 — SEEDED capture: swept wedges replace, unswept sky keeps the site's existing horizon (trace → scan)
+const CACHE = 'horizon-v44'; // app v2.12.0 — purpose up front: new-visitor welcome states what the app is for; About refreshed (measuring shipped)
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

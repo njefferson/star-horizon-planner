@@ -7,13 +7,14 @@
 import { el } from './dom.js';
 
 const ABOUT_HTML = `
-  <h2>Horizon Planner — why this app exists</h2>
-  <p>Most of this exists free somewhere — catalogs and altitude curves, weather
-  and seeing, a polar reticle, rise/set times, even a hand-entered custom
-  horizon. The value here is <strong>synergy, offline</strong>: one installable
-  tool tying your site, your horizon, your targets and your alignment together,
-  built around <strong>a per-site horizon profile of the real trees and
-  obstructions in your actual yard</strong> and applying it to every answer.</p>
+  <h2>Star Horizon Planner — what it's for</h2>
+  <p><strong>Plan your night around what you can actually see.</strong> Every
+  planner assumes a flat 0&deg; horizon; your yard has trees, hills and
+  rooflines. This app <strong>measures your real horizon</strong> — trace
+  distant terrain from a satellite map, sweep your treeline with the camera,
+  or drag it by hand — and applies it to every answer: tonight's targets,
+  effective rise/set windows, polar alignment, and an AR view of the night's
+  arcs over your own sky. Offline-first for the field; exports to Stellarium.</p>
 
   <h3>The novel ideas</h3>
   <p>1. <strong>"Above MY horizon" visibility</strong> — a target counts as
@@ -21,9 +22,10 @@ const ABOUT_HTML = `
   2. <strong>The zenith dead-zone</strong> — an alt-az smart scope can't track
   through the zenith, so effective windows subtract that <em>second</em> horizon
   too. No other planner models it.<br>
-  3. <strong>Measuring, not typing</strong> — sensor-trace capture (sweep your
-  treeline with the phone) is the roadmap's top item; today's editor is
-  drag-to-set with Stellarium import/export.</p>
+  3. <strong>Measuring, not typing</strong> — a 360&deg; terrain trace from
+  elevation data seeds the horizon, the live-camera sweep refines the wedges
+  you scan (the rest keeps the baseline), and the editor with undo/redo
+  finishes the job. Stellarium import/export round-trips it all.</p>
 
   <h3>Instrument-agnostic from day one</h3>
   <p>The field-of-view is a first-class per-instrument profile. This build ships

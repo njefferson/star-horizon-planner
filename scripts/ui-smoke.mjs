@@ -157,7 +157,10 @@ await step('boot: 6 tabs, Tonight opens into the sky at the seeded default site'
   ok(await page.$$eval('.tab[aria-current="page"]', (e) => e.length) === 1, 'active tab has aria-current="page"');
   // First run shows a welcome that asks for a location; dismiss it.
   await page.waitForSelector('.welcome-dialog');
-  ok(/where are you|find your sky/i.test(await page.$eval('.welcome-dialog', (e) => e.textContent)), 'first-run welcome prompts for location');
+  const welcome = await page.$eval('.welcome-dialog', (e) => e.textContent);
+  ok(/where are you|find your sky/i.test(welcome), 'first-run welcome prompts for location');
+  ok(/measures your real horizon/i.test(welcome), 'welcome states the app’s purpose to new visitors');
+  ok(/ⓘ/.test(welcome), 'welcome points at the ⓘ button for the full story');
   await page.click('.welcome-dialog .btn.ghost'); // Not now
   await page.waitForSelector('.welcome-dialog', { state: 'detached' });
   // No create-a-site wall: a placeholder site is seeded so Tonight shows the sky
@@ -763,6 +766,8 @@ await step('about: credits visible, scaffold copy gone', async () => {
   ok(/OpenNGC/.test(text), 'OpenNGC credited');
   ok(/astronomy-engine/.test(text), 'astronomy-engine credited');
   ok(!/early scaffold/i.test(text), 'stale scaffold line removed');
+  ok(/what it.s for|actually see/i.test(text), 'About leads with the purpose');
+  ok(!/roadmap.s top item/i.test(text), 'stale capture-is-roadmap copy gone (it shipped)');
   await page.keyboard.press('Escape');
 });
 

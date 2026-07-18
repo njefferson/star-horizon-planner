@@ -500,6 +500,16 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.12.0 — 2026-07-18** (SW cache `horizon-v44`). **Purpose up front**
+  (Noah's ask): the first-run welcome now STATES what the app is for — every
+  planner assumes a flat horizon; this one measures yours and plans around
+  what you can actually see — before asking for a location, and points at
+  the ⓘ button for the full story. The ⓘ About refreshed: leads with the
+  purpose, and the stale "measuring is the roadmap's top item" copy replaced
+  with the shipped reality (terrain trace seeds → camera sweep refines →
+  editor with undo/redo finishes → Stellarium round-trips). 161 unit, 50
+  contrast, 26 smoke (welcome purpose + pointer asserted; About purpose +
+  staleness guard), 0 axe (34 scans).
 - **v2.11.0 — 2026-07-18** (SW cache `horizon-v43`). **SEEDED capture** — the
   missing link in Noah's trace → scan → export workflow. Both capture paths
   (camera + sensor) now save through `profileFromSession(session, base)`:
