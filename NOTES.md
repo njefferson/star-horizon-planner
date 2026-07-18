@@ -9,16 +9,12 @@ Photography-Studio): free, on-device, offline-first PWA on Cloudflare Pages.
 The AR sky view that used to headline this block SHIPPED as v2.0.0; weather
 shipped as v2.1.0/v2.2.0; the polar "point to the pole" live aid as v2.3.0.
 What's next, in rough order:
-- **NEEDS-HIS-HANDS backlog (Noah, on a phone/iPad):** the v1.1 on-device
-  checklist item below is still open, plus every device pass since — capture
-  feel/compass drift, AR sky framing, and now the polar-aim lock feel
-  (marker stability at steep tilt, hysteresis feel, treeline warning at a real
-  blocked-north site). `staging` == `main`, so testing production is fine.
 - **Remote-buildable roadmap next-ups:** offline thumbnail precache (the
   stated "still to come" half of the details page), instrument preset library
   (Dwarf/Vespera + sensor-mm entry), map-pin terrain horizon (the big one).
-- **Repo metadata:** confirm the GitHub About fields and re-upload the v2.0.2
-  og-image as the social preview (see CLAUDE.md — manual, needs confirmation).
+- Device pass through v2.3.0 (incl. the polar-aim lock feel) **done — Noah,
+  2026-07-18**. Repo metadata (About fields + v2.0.2 social preview) confirmed
+  done the same day — the CLAUDE.md ritual is satisfied for this art rev.
 
 ## COMPASS: magnetic vs true, and can we detect the phone? (settled 2026-07-18)
 Q (Noah): can't we detect the phone model and know whether its compass is
@@ -141,8 +137,10 @@ The bird app is the structural template. Reuse near-verbatim:
   share-links for export/import; `:root` CSS tokens + `[data-theme="dark"]` (never
   hex-in-place); IBM Plex, mono for every number; release = SW cache version bumped
   with the changelog. **Branches: ONLY `staging` and `main` exist — ever** (owner's
-  standing order, 2026-07-17). Work lands on `staging` → on-device go → merge to
-  `main`; never create any other branch. (Parallel sessions must therefore pull
+  standing order, 2026-07-17; reason restated 2026-07-18: **sessions cannot delete
+  remote branches**, so any extra branch is permanent clutter — leave existing
+  strays alone and never make new ones). Work lands on `staging` → on-device go →
+  merge to `main`; never create any other branch. (Parallel sessions must therefore pull
   `staging` before pushing — the Step 8 collision is the cautionary tale.)
 
 The **night graph** follows the photo studio's one hand-rolled viz routine,
