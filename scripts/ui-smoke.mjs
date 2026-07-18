@@ -80,7 +80,7 @@ page.on('console', (m) => {
   // placeholder on error). Everything else is a real error.
   const t = m.text();
   const at = `${m.location()?.url || ''} ${t}`;
-  const external = /fonts\.g(oogleapis|static)\.com|alasky\.u-strasbg\.fr|hips2fits|wikipedia\.org|open-meteo\.com/.test(at);
+  const external = /fonts\.g(oogleapis|static)\.com|alasky\.u-strasbg\.fr|hips2fits|wikipedia\.org|open-meteo\.com|7timer\.info/.test(at);
   if (m.type() === 'error' && !external) pageErrors.push(t);
 });
 page.on('dialog', (d) => d.accept()); // confirm() on remove/reset
@@ -93,13 +93,25 @@ await page.route(/fonts\.g(oogleapis|static)\.com/, (r) => r.abort());
 // the same way on every run (no sandbox network, no real weather).
 await page.route(/api\.open-meteo\.com\/v1\/forecast/, (r) => {
   const now = Math.floor(Date.now() / 3600000) * 3600; // top of the current hour, s
-  const time = [], cc = [], lo = [], mi = [], hi = [];
+  const time = [], cc = [], lo = [], mi = [], hi = [], wind = [], rh = [], temp = [];
   for (let k = -48; k <= 48; k++) {
     time.push(now + k * 3600);
     const v = Math.abs(k * 7) % 101;
     cc.push(v); lo.push(Math.round(v / 2)); mi.push(Math.round(v / 3)); hi.push(Math.round(v / 6));
+    wind.push(5 + (Math.abs(k) % 20)); rh.push(30 + (Math.abs(k) % 60)); temp.push(75 - (Math.abs(k) % 25));
   }
-  r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: { time, cloud_cover: cc, cloud_cover_low: lo, cloud_cover_mid: mi, cloud_cover_high: hi } }) });
+  r.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: {
+    time, cloud_cover: cc, cloud_cover_low: lo, cloud_cover_mid: mi, cloud_cover_high: hi,
+    wind_speed_10m: wind, relative_humidity_2m: rh, temperature_2m: temp,
+  } }) });
+});
+// 7Timer astro fixture: 3-hourly seeing/transparency around now.
+await page.route(/7timer\.info/, (r) => {
+  const d = new Date(Math.floor(Date.now() / 3600000) * 3600000 - 6 * 3600000);
+  const init = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}${String(d.getUTCHours()).padStart(2, '0')}`;
+  const dataseries = [];
+  for (let tp = 3; tp <= 72; tp += 3) dataseries.push({ timepoint: tp, seeing: (tp / 3) % 8 + 1, transparency: ((tp / 3) + 3) % 8 + 1 });
+  r.fulfill({ contentType: 'application/json', body: JSON.stringify({ init, dataseries }) });
 });
 const tab = (label) => page.click(`.tab:has-text("${label}")`);
 const shot = async (name) => { if (SHOTS) await page.screenshot({ path: join(SHOTS, name) }); };
@@ -345,22 +357,28 @@ await step('tonight: canvas paints, visibility row + effective window language',
   const moon = await page.$('.vis-moon');
   if (moon) ok(/☾ \d+°/.test(await moon.textContent()), 'moon chip formats as ☾ N°');
 
-  // Cloud strip (v2.1.0): the mocked forecast makes it deterministic — the strip
-  // unhides, paints, and carries its text twin; the scrub readout adds a ☁ row.
+  // Astro-weather block (v2.2.0): both mocked forecasts make it deterministic —
+  // the block unhides, paints (clouds + seeing/transparency + darkness + ground
+  // rows), and carries its text twins in the summary and the scrub readout.
   await page.waitForSelector('.ng-cloud:not([hidden])');
-  const cloudPainted = await page.evaluate(() => {
+  const blockPainted = await page.evaluate(() => {
     const c = document.querySelector('.ng-cloud-canvas');
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
     for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
     return false;
   });
-  ok(cloudPainted, 'cloud strip canvas has pixels');
-  ok(/Clouds tonight/.test(await page.$eval('.ng-cloud-sum', (e) => e.textContent)), 'cloud summary line present');
+  ok(blockPainted, 'astro-weather canvas has pixels');
+  const sum = await page.$eval('.ng-cloud-sum', (e) => e.textContent);
+  ok(/Astro weather tonight/.test(sum) && /clouds/.test(sum), `summary carries clouds: ${sum.slice(0, 70)}`);
+  ok(/seeing \d\/8/.test(sum) && /7Timer/.test(sum), 'summary carries seeing + the 7Timer source');
+  // The block is taller than the old 3-row strip: 9 rows incl. the temp digits.
+  ok(await page.$eval('.ng-cloud-canvas', (e) => e.getBoundingClientRect().height) > 100, 'full block height (9 rows)');
   await page.focus('.ng-wrap');
   await page.keyboard.press('ArrowRight');
-  ok(/☁|clouds/.test(await page.$eval('.ng-readout', (e) => e.textContent)) &&
-     /clouds\s*\d+%/.test(await page.$eval('.ng-readout', (e) => e.textContent.replace(/\s+/g, ' '))),
-    'scrub readout carries a numeric clouds row');
+  const ro = await page.$eval('.ng-readout', (e) => e.textContent.replace(/\s+/g, ' '));
+  ok(/clouds\s*\d+%/.test(ro), `readout: numeric clouds row (${ro.slice(0, 90)})`);
+  ok(/seeing\s*\d\/8/.test(ro) && /transparency \d\/8/.test(ro), 'readout: seeing/transparency row');
+  ok(/\d+°F/.test(ro) && /wind \d+ mph/.test(ro) && /RH \d+%/.test(ro), 'readout: ground row (°F, wind, RH)');
   await shot('tonight.png');
 });
 

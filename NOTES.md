@@ -405,11 +405,11 @@ tools:**
   rectangle (+ mosaic grid) over the object thumbnail. Presets ship in
   `data/instruments.js`; customs persist in `horizon.instruments` and
   export/import with sites so they aren't trapped in one browser.
-- **Weather overlay (Astroweather)** — cloud cover SHIPPED v2.1.0: Open-Meteo
-  hourly cloud cover (total/low/mid/high) shaded per hour UNDER the night graph
-  on the same hour axis, cached per site/night (`model/weather.js`), numeric ☁
-  row in the scrub readout. Remaining for a later pass: **7Timer seeing/
-  transparency** rows. Keyless + CORS-friendly. (Device ask, 2026-07-18.)
+- **Weather overlay (Astroweather)** — SHIPPED in full: clouds v2.1.0, the rest
+  v2.2.0 (Noah's Clear-Sky-Chart reference): hi/mid/lo clouds + 7Timer seeing/
+  transparency + on-device darkness + wind/RH/°F, all under the night graph on
+  its hour axis, cached per site/night (`model/weather.js`), numeric rows in
+  the scrub readout. Keyless + CORS-friendly. (Device ask, 2026-07-18.)
 - **AR sky view with an hour scrubber (Noah: "the last missing piece")** — the
   time-vs-altitude graph can't show an object's ARC across the sky (its az/alt
   path). Wanted: an augmented-reality / planetarium view that shows where each
@@ -483,6 +483,18 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.2.0 — 2026-07-18** (SW cache `horizon-v28`). **Full Astro weather** —
+  Noah's Clear Sky Chart reference made native. The block under the night graph
+  now carries, on the same hour axis: clouds hi/mid/lo (Open-Meteo, hourly),
+  **transparency + seeing** (7Timer astro, 3-hourly, 1–8), an **on-device
+  darkness row** (`night.js darknessLevel`: sun twilight ladder + illumination-
+  weighted moonlight — no network), and ground rows **wind (mph) / RH% /
+  temperature (°F digits, not shading)**. One visual grammar (opacity = worse
+  for observing; MOON tone) → no new palette or contrast pairs. Per-source
+  degradation: 7Timer down → its rows vanish; everything down → block hidden.
+  Scrub readout gains seeing/transparency + ground rows. Cache slot v2 shape
+  ({samples, astro}); CSP += www.7timer.info. US units (mph/°F) by design.
+  127 unit, 50 contrast, 20 smoke, 0 axe (30 scans).
 - **v2.1.0 — 2026-07-18** (SW cache `horizon-v27`). **Astroweather, first cut**
   (the roadmap's device ask): Open-Meteo hourly cloud cover under the night
   graph on the SAME hour axis — a three-row strip (hi/mid/lo, opacity = %),

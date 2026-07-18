@@ -17,14 +17,13 @@ import { visibility, visibleTonight } from '../model/visibility.js';
 import { activeInstrument } from '../model/instruments.js';
 import { loadCatalog, favoriteIds, shortName } from '../model/catalog.js';
 import { activeSite } from '../model/sites.js';
-import { nightWindow, darkWindow, sampleTwilight } from '../model/night.js';
-import { getNightClouds } from '../model/weather.js';
+import { nightWindow, darkWindow, sampleTwilight, darknessLevel } from '../model/night.js';
+import { getNightAstro } from '../model/weather.js';
 import { useMyLocation, openLocationSearch } from './location.js';
 
 const HIGHLIGHTS = 6; // brightest targets to preview when nothing is favourited yet
 
 const H = 320;                    // graph height, CSS px
-const CLOUD_H = 54;               // cloud-strip height, CSS px (3 band rows)
 const M = { l: 32, r: 12, t: 12, b: 24 };
 const ALT_MAX = 90;
 const STEP_MIN = 4;               // sampling cadence for the curves
@@ -142,17 +141,29 @@ export async function renderTonight(app, state, nav) {
   const readout = el('div.ng-readout', { 'aria-live': 'polite' }, hintText(profile));
   const legend = buildLegend(series, moonNow);
 
-  // Cloud strip (roadmap "Astroweather"): hourly Open-Meteo cloud cover shaded
-  // UNDER the graph on the SAME hour axis. Hidden until a forecast (fresh or
-  // cached) exists — offline with no cache, Tonight renders exactly as before.
-  // The canvas is decorative; the summary line + scrub readout are the text
-  // channel (colour/opacity never the sole carrier).
-  const weather = { samples: null };
+  // Astro-weather block (Clear-Sky-Chart style): Open-Meteo clouds + wind/RH/
+  // temperature, 7Timer seeing/transparency, and an on-device DARKNESS row —
+  // all UNDER the graph on the SAME hour axis. Hidden until some forecast
+  // (fresh or cached) exists — offline with no cache, Tonight renders exactly
+  // as before. The canvas is decorative; the summary line + scrub readout are
+  // the text channel (opacity is never the sole carrier).
+  const weather = { samples: null, astro: null, rows: null };
   const cloudCv = document.createElement('canvas'); cloudCv.className = 'ng-cloud-canvas';
   cloudCv.setAttribute('aria-hidden', 'true');
   const cloudSum = el('div.ng-cloud-sum.dim.small', {}, '');
   const cloudWrap = el('div.ng-cloud', { hidden: true }, []);
   cloudWrap.append(cloudCv, cloudSum);
+  // The darkness row needs sun + moon by hour — computed here, no network.
+  const darknessByHour = (t0, t1) => {
+    const out = [];
+    const illum = moonInfo(observer, midOf(win)).illumination;
+    for (let ms = Math.ceil(t0 / 3600000) * 3600000 - 1800000; ms <= t1 + 1800000; ms += 3600000) {
+      const d = new Date(ms);
+      const sunAlt = nearest(twilight.map((s) => ({ ms: s.t.getTime(), alt: s.alt })), ms)?.alt ?? -18;
+      out.push({ ms, level: darknessLevel(sunAlt, moonAltAz(observer, d).altitude, illum) });
+    }
+    return out;
+  };
 
   const instrument = activeInstrument();
   app.append(wrap, cloudWrap, legend, readout,
@@ -166,20 +177,22 @@ export async function renderTonight(app, state, nav) {
     model.setWidth(w);
     sizeCanvas(base, w, H); sizeCanvas(over, w, H);
     drawBase(base.getContext('2d'), model, { twilight, series, moonPts, win });
-    if (weather.samples) {
-      sizeCanvas(cloudCv, w, CLOUD_H);
-      drawClouds(cloudCv.getContext('2d'), model, weather.samples);
+    if (weather.rows) {
+      sizeCanvas(cloudCv, w, astroBlockHeight(weather.rows));
+      drawAstroBlock(cloudCv.getContext('2d'), model, weather.rows);
     }
   }
   draw();
   window.addEventListener('resize', draw, { passive: true });
 
   // Forecast arrives async; ignore it if the user has already navigated away.
-  getNightClouds({ site, win }).then((samples) => {
-    if (!samples || !app.contains(wrap)) return;
-    weather.samples = samples;
+  getNightAstro({ site, win }).then((data) => {
+    if (!data || !app.contains(wrap)) return;
+    weather.samples = data.samples;
+    weather.astro = data.astro;
+    weather.rows = buildAstroRows(data, darknessByHour(model.t0, model.t1));
     cloudWrap.hidden = false;
-    cloudSum.textContent = cloudSummary(samples);
+    cloudSum.textContent = astroSummary(data);
     draw();
   }).catch(() => {});
 
@@ -331,42 +344,100 @@ function strokeVisible(ctx, s, pts) {
   ctx.stroke();
 }
 
-// --- cloud strip ------------------------------------------------------------
-// Three rows (high/mid/low, sky order) of hour cells whose opacity IS the cloud
-// percentage, over the same time axis as the graph. Opacity is a glance aid
-// only — exact numbers live in the summary line and the scrub readout.
-const CLOUD_ROWS = [['high', 'hi'], ['mid', 'mid'], ['low', 'lo']];
-function drawClouds(ctx, s, samples) {
-  const W = s.W, top = 2, rowH = (CLOUD_H - 2 * top) / 3;
-  ctx.clearRect(0, 0, W, CLOUD_H);
-  ctx.fillStyle = BAND.night;
-  ctx.fillRect(M.l, top, W - M.l - M.r, CLOUD_H - 2 * top);
-  // Hour gridlines, aligned with the graph above.
-  ctx.strokeStyle = GRID;
-  for (let ms = ceilHour(s.t0); ms <= s.t1; ms += 3600000) {
-    const x = s.x(ms);
-    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, CLOUD_H - top); ctx.stroke();
+// --- astro-weather block ------------------------------------------------------
+// Clear-Sky-Chart-style rows of time cells over the graph's own hour axis. One
+// visual grammar throughout: cell opacity = HOW BAD for observing (clouds %,
+// RH %, wind vs 40 mph, inverted seeing/transparency, sky brightness) in the
+// MOON tone — a sequential monochrome ramp, so no categorical palette and no
+// new contrast pairs. Temperature isn't good/bad, so it prints DIGITS instead
+// of shading. Opacity is a glance aid only — exact numbers live in the summary
+// line and the scrub readout.
+const ROW_H = 14, ROW_GAP = 4, BLOCK_PAD = 2;
+const HOUR_MS = 3600000;
+
+// Row descriptors: { label, kind:'cells'|'text', cells:[{ms,a}]|texts:[{ms,v}], halfSpanMs }
+function buildAstroRows({ samples, astro }, dark) {
+  const rows = [];
+  const cells = (list, val, half) => list
+    .map((p) => ({ ms: p.ms, a: val(p) }))
+    .filter((c) => c.a != null)
+    .map((c) => ({ ...c, a: Math.max(0, Math.min(1, c.a)) * 0.85, half }));
+  if (samples) {
+    rows.push(
+      { label: 'hi', cells: cells(samples, (p) => p.high / 100, HOUR_MS / 2) },
+      { label: 'mid', cells: cells(samples, (p) => p.mid / 100, HOUR_MS / 2) },
+      { label: 'lo', cells: cells(samples, (p) => p.low / 100, HOUR_MS / 2) },
+    );
   }
-  ctx.font = '9px ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  CLOUD_ROWS.forEach(([band, label], i) => {
-    const y = top + i * rowH;
-    ctx.fillStyle = AXIS; ctx.fillText(label, M.l - 4, y + rowH / 2);
-    for (const p of samples) {
-      const x0 = Math.max(M.l, s.x(p.ms - 1800000)), x1 = Math.min(s.W - M.r, s.x(p.ms + 1800000));
-      if (x1 <= x0) continue;
-      ctx.fillStyle = `rgba(207, 214, 230, ${(p[band] / 100) * 0.85})`; // MOON tone
-      ctx.fillRect(x0, y + 1, x1 - x0, rowH - 2);
+  if (astro) {
+    rows.push(
+      { label: 'trn', cells: cells(astro, (p) => (8 - p.transparency) / 7, HOUR_MS * 1.5) },
+      { label: 'see', cells: cells(astro, (p) => (8 - p.seeing) / 7, HOUR_MS * 1.5) },
+    );
+  }
+  rows.push({ label: 'drk', cells: cells(dark, (p) => p.level, HOUR_MS / 2) });
+  if (samples) {
+    rows.push(
+      { label: 'wnd', gapBefore: true, cells: cells(samples, (p) => (p.windMph == null ? null : Math.min(1, p.windMph / 40)), HOUR_MS / 2) },
+      { label: 'rh%', cells: cells(samples, (p) => (p.rh == null ? null : p.rh / 100), HOUR_MS / 2) },
+      { label: '°F', kind: 'text', texts: samples.filter((p, i) => p.tempF != null && i % 3 === 1).map((p) => ({ ms: p.ms, v: Math.round(p.tempF) })) },
+    );
+  }
+  return rows;
+}
+function astroBlockHeight(rows) {
+  return rows.length * ROW_H + rows.filter((r) => r.gapBefore).length * ROW_GAP + 2 * BLOCK_PAD;
+}
+function drawAstroBlock(ctx, s, rows) {
+  const W = s.W, hgt = astroBlockHeight(rows);
+  ctx.clearRect(0, 0, W, hgt);
+  ctx.fillStyle = BAND.night;
+  ctx.fillRect(M.l, BLOCK_PAD, W - M.l - M.r, hgt - 2 * BLOCK_PAD);
+  ctx.strokeStyle = GRID;
+  for (let ms = ceilHour(s.t0); ms <= s.t1; ms += HOUR_MS) {
+    const x = s.x(ms);
+    ctx.beginPath(); ctx.moveTo(x, BLOCK_PAD); ctx.lineTo(x, hgt - BLOCK_PAD); ctx.stroke();
+  }
+  let y = BLOCK_PAD;
+  ctx.textBaseline = 'middle';
+  for (const row of rows) {
+    if (row.gapBefore) y += ROW_GAP;
+    ctx.font = '9px ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.fillStyle = AXIS;
+    ctx.fillText(row.label, M.l - 4, y + ROW_H / 2);
+    if (row.kind === 'text') {
+      ctx.font = '10px ui-monospace, monospace'; ctx.textAlign = 'center';
+      for (const t of row.texts) {
+        const x = s.x(t.ms);
+        if (x >= M.l + 8 && x <= s.W - M.r - 8) ctx.fillText(String(t.v), x, y + ROW_H / 2);
+      }
+    } else {
+      for (const c of row.cells) {
+        const x0 = Math.max(M.l, s.x(c.ms - c.half)), x1 = Math.min(s.W - M.r, s.x(c.ms + c.half));
+        if (x1 <= x0) continue;
+        ctx.fillStyle = `rgba(207, 214, 230, ${c.a})`; // MOON tone
+        ctx.fillRect(x0, y + 1, x1 - x0, ROW_H - 2);
+      }
     }
-  });
+    y += ROW_H;
+  }
 }
 
-// One sentence of text carrying what the strip shades (its accessible twin).
-function cloudSummary(samples) {
-  const avg = Math.round(samples.reduce((m, p) => m + p.total, 0) / samples.length);
-  const worst = samples.reduce((a, b) => (b.total > a.total ? b : a), samples[0]);
-  const src = 'Open-Meteo';
-  if (worst.total <= 15) return `Clouds tonight: mostly clear all night (avg ${avg}%) · ${src}`;
-  return `Clouds tonight: avg ${avg}% · worst ${Math.round(worst.total)}% around ${hourLabelFull(worst.ms)} · ${src}`;
+// One sentence of text carrying what the block shades (its accessible twin).
+function astroSummary({ samples, astro }) {
+  const bits = [];
+  if (samples && samples.length) {
+    const avg = Math.round(samples.reduce((m, p) => m + p.total, 0) / samples.length);
+    const worst = samples.reduce((a, b) => (b.total > a.total ? b : a), samples[0]);
+    bits.push(worst.total <= 15
+      ? `clouds mostly clear (avg ${avg}%)`
+      : `clouds avg ${avg}% · worst ${Math.round(worst.total)}% around ${hourLabelFull(worst.ms)}`);
+  }
+  if (astro && astro.length) {
+    const mid = astro[Math.floor(astro.length / 2)];
+    bits.push(`seeing ${mid.seeing}/8 · transparency ${mid.transparency}/8 mid-night`);
+  }
+  const src = [samples && 'Open-Meteo', astro && '7Timer'].filter(Boolean).join(' + ');
+  return `Astro weather tonight: ${bits.join(' · ')} · ${src}`;
 }
 
 // --- scrub overlay ----------------------------------------------------------
@@ -384,16 +455,27 @@ function drawScrub(ctx, s, ms, series, profile, observer, readout, weather) {
     if (p.up) drawMark(ctx, ser.mark, x, s.y(p.alt), 4.5, ser.color);
     rows.push({ color: ser.color, mark: ser.mark, name: shortName(ser.target), alt: p.alt, vis: p.vis, up: p.up });
   }
-  // Cloud reading at the cursor hour (when a forecast is loaded) — the numeric
-  // twin of the shaded strip, announced with the rest of the readout.
-  const wp = weather && weather.samples ? nearest(weather.samples.map((p) => ({ ...p, ms: p.ms })), ms) : null;
+  // Weather readings at the cursor hour (when forecasts are loaded) — the
+  // numeric twin of the shaded block, announced with the rest of the readout.
+  const roRow = (glyph, name, value, okFlag, flagText) => el('div.ng-ro-row', {}, [
+    el('span.ng-mark', { 'aria-hidden': 'true' }, glyph),
+    el('span.ng-ro-name', {}, name),
+    el('span.ng-ro-alt', {}, value),
+    el('span.ng-ro-flag', { class: okFlag ? 'ok' : 'no' }, flagText),
+  ]);
+  const wp = weather && weather.samples ? nearest(weather.samples, ms) : null;
   const cloudRow = wp && Math.abs(wp.ms - ms) <= 45 * 60000
-    ? el('div.ng-ro-row', {}, [
-        el('span.ng-mark', { 'aria-hidden': 'true' }, '☁'),
-        el('span.ng-ro-name', {}, 'clouds'),
-        el('span.ng-ro-alt', {}, `${Math.round(wp.total)}%`),
-        el('span.ng-ro-flag', { class: wp.total <= 30 ? 'ok' : 'no' }, `lo ${Math.round(wp.low)} · mid ${Math.round(wp.mid)} · hi ${Math.round(wp.high)}`),
-      ])
+    ? roRow('☁', 'clouds', `${Math.round(wp.total)}%`, wp.total <= 30,
+        `lo ${Math.round(wp.low)} · mid ${Math.round(wp.mid)} · hi ${Math.round(wp.high)}`)
+    : null;
+  const ap = weather && weather.astro ? nearest(weather.astro, ms) : null;
+  const astroRow = ap && Math.abs(ap.ms - ms) <= 100 * 60000
+    ? roRow('✳', 'seeing', `${ap.seeing}/8`, ap.seeing >= 4, `transparency ${ap.transparency}/8`)
+    : null;
+  const groundRow = wp && Math.abs(wp.ms - ms) <= 45 * 60000 && (wp.tempF != null || wp.windMph != null)
+    ? roRow('☴', 'ground', wp.tempF != null ? `${Math.round(wp.tempF)}°F` : '—',
+        wp.windMph == null || wp.windMph < 15,
+        `${wp.windMph != null ? `wind ${Math.round(wp.windMph)} mph` : ''}${wp.rh != null ? ` · RH ${Math.round(wp.rh)}%` : ''}`)
     : null;
   readout.replaceChildren(...[
     el('div.ng-ro-time', {}, hourLabelFull(ms)),
@@ -404,7 +486,7 @@ function drawScrub(ctx, s, ms, series, profile, observer, readout, weather) {
       el('span.ng-ro-flag', { class: r.up && r.vis ? 'ok' : 'no' },
         !r.up ? '' : r.vis ? 'clear' : 'behind trees'),
     ])),
-    cloudRow,
+    cloudRow, astroRow, groundRow,
   ].filter(Boolean));
 }
 

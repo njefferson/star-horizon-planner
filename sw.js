@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v27'; // app v2.1.0 — Astroweather first cut: Open-Meteo hourly cloud cover shaded under the night graph on the same hour axis, cached per site/night, ☁ row in the scrub readout
+const CACHE = 'horizon-v28'; // app v2.2.0 — full Astro weather (Clear-Sky-Chart style): clouds + 7Timer seeing/transparency + on-device darkness + wind/RH/°F rows under the night graph
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

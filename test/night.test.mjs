@@ -8,7 +8,7 @@ globalThis.localStorage = (() => {
 })();
 
 const { makeObserver } = await import('../src/model/astro.js');
-const { nightWindow, sampleTwilight, darkestAltitude, darkWindow } = await import('../src/model/night.js');
+const { nightWindow, sampleTwilight, darkestAltitude, darkWindow, darknessLevel } = await import('../src/model/night.js');
 
 const obs = makeObserver(37.5, -122.0, 0);
 const DATE = new Date('2026-03-20T12:00:00Z');
@@ -62,6 +62,18 @@ test('darkWindow falls back (dark:false) under the polar-day sun', () => {
   const d = darkWindow(arctic, new Date('2026-06-21T12:00:00Z'));
   assert.equal(d.dark, false, 'never reaches nautical darkness');
   assert.ok(d.start.getTime() < d.end.getTime());
+});
+
+test('darknessLevel: sun ladder, moonlight term, clamps', () => {
+  const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
+  assert.equal(darknessLevel(10, -20, 0.5), 1, 'daylight is 1 regardless of moon');
+  assert.equal(darknessLevel(0, -20, 0), 1, 'sunset instant still 1');
+  near(darknessLevel(-9, -20, 0), 0.5, 1e-9, 'mid-twilight (−9°) is halfway');
+  assert.equal(darknessLevel(-18, -20, 0.99), 0, 'moonless astro night is 0 (moon below horizon)');
+  near(darknessLevel(-18, 40, 1), 0.35, 1e-9, 'full moon high up caps the moon term');
+  near(darknessLevel(-18, 10, 1), 0.35 * 0.5, 1e-9, 'low moon fades in over first 20°');
+  near(darknessLevel(-18, 40, 0.5), 0.175, 1e-9, 'half-lit moon is half the term');
+  assert.equal(darknessLevel(-2, 40, 1), 1, 'twilight + full moon clamps at 1');
 });
 
 // (The legacy single-location store was absorbed by sites.js in v1.1; its

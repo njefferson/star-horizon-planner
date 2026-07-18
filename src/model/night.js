@@ -56,6 +56,22 @@ export function darkestAltitude(samples) {
 }
 
 /**
+ * Sky brightness 0..1 for the Astro-weather "darkness" row — 1 = daylight,
+ * 0 = moonless astronomical night. Computed entirely on-device (no forecast):
+ * the Sun term ramps 1→0 as its altitude falls 0°→−18° (the twilight ladder),
+ * and a risen Moon adds an illumination-weighted term that fades in over its
+ * first ~20° of altitude (a full Moon high up ≈ 0.35 — bright, but never
+ * daylight). Clamped to [0, 1].
+ */
+export function darknessLevel(sunAltitudeDeg, moonAltitudeDeg, moonIllumination) {
+  const sun = Math.max(0, Math.min(1, (sunAltitudeDeg + 18) / 18));
+  const moon = moonAltitudeDeg > 0
+    ? 0.35 * Math.max(0, Math.min(1, moonIllumination)) * Math.min(1, moonAltitudeDeg / 20)
+    : 0;
+  return Math.min(1, sun + moon);
+}
+
+/**
  * The astronomically-dark sub-span of tonight — from the Sun crossing −18° at
  * dusk to −18° at dawn. Falls back to nautical (−12°) when it never gets fully
  * dark, and to the whole nightWindow if even that fails (bright northern
