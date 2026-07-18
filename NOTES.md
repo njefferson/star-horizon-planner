@@ -494,6 +494,21 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.8.1 — 2026-07-18** (SW cache `horizon-v39`). **Trace 429 root cause
+  CONFIRMED and fixed.** Noah's iPad screenshots delivered the v2.7.1
+  diagnostic's payoff: "elevation API 429" at 69%, every site. The arithmetic
+  names the mechanism: Open-Meteo's free limit meters ~600 per minute
+  counting COORDINATES, and 600/864 = 69% — the trace burned the minute's
+  budget mid-run. Fix: 16 samples/ray (was 24) → **576 coordinates**, inside
+  the budget, still log-spaced dense-near (unit test now asserts the trace
+  stays under 600); a 429 anyway (back-to-back traces) waits out the window
+  (20 s/45 s pauses, surfaced in the silent progress line via onNote) instead
+  of burning quick retries; the site-elevation lookup names its errors too
+  (its 429 had masqueraded as "needs a connection"). Smoke's synthetic
+  plateau recalibrated so the due-south ray is uniquely tallest under the
+  16-sample spacing (~6.6° → editor "tallest 7°"). 157 unit, 50 contrast,
+  24 smoke, 0 axe (34 scans). Production bonus: the SW caches successful
+  elevation batches, so a re-trace of the same site is mostly cache-served.
 - **v2.8.0 — 2026-07-18** (SW cache `horizon-v38`). **Trace rays drawn**
   (Noah's ask): the map overlay now shows all 36 thin gold rays from the
   site to each direction's blocking point, under the heavier ring that

@@ -167,9 +167,10 @@ async function initSiteElevation(site) {
     if (!tm) return;
     tm.siteElev = e;
     say(`Site elevation ${Math.round(e)} m. Trace to compute the terrain horizon.`);
-  } catch {
+  } catch (err) {
     if (!tm) return;
-    say('Elevation lookup needs a connection — the trace can’t run offline.');
+    // Name the real error (a 429 here misled as "offline" on 2026-07-18).
+    say(`Elevation lookup failed (${err?.message || 'no connection'}) — the trace needs it. Try again shortly.`);
   }
 }
 
@@ -184,7 +185,12 @@ async function runTrace(nav) {
   setProgress(0);
   try {
     const site = tm.site;
-    const traced = await traceHorizon(site, tm.siteElev, { onProgress: setProgress });
+    const traced = await traceHorizon(site, tm.siteElev, {
+      onProgress: setProgress,
+      // Rate-limit pauses show in the silent progress line (not the live
+      // status node — a countdown is a stream, not an announcement).
+      onNote: (msg) => { const n = root && root.querySelector('#tm-progress'); if (n && msg) n.textContent = msg; },
+    });
     if (!tm || !mounted()) return;
 
     // Apply as the site's horizon (the automatic draw Noah asked for), with a

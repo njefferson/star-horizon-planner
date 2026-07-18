@@ -126,7 +126,10 @@ test('traceHorizon: 50-coord batches, backoff retries, named final failure', asy
   const counting = async (url) => { calls++; return terrainFetch(() => 100)(url); };
   const t = await traceHorizon(SITE, 100, { fetchFn: counting, sleep });
   assert.equal(t.points.length, 36);
-  assert.equal(calls, Math.ceil((360 / TRACE.azStep) * TRACE.samplesPerRay / TRACE.batchSize), '18 batches');
+  assert.equal(calls, Math.ceil((360 / TRACE.azStep) * TRACE.samplesPerRay / TRACE.batchSize), '12 batches');
+  // The whole trace must fit Open-Meteo's ~600-coordinates-per-minute budget
+  // (the confirmed 2026-07-18 429 root cause: 864 coords died at 69% = 600/864).
+  assert.ok((360 / TRACE.azStep) * TRACE.samplesPerRay < 600, 'trace fits the per-minute coordinate budget');
 
   // A batch that fails twice then succeeds — the backoff attempts absorb it.
   let n = 0;
@@ -146,6 +149,14 @@ test('traceHorizon: 50-coord batches, backoff retries, named final failure', asy
   await traceHorizon(SITE, 100, { fetchFn: failOnceEarly, sleep: logSleep });
   assert.equal(waits[0], TRACE.backoff_ms[0], 'first retry waits the first backoff');
   assert.ok(waits.filter((w) => w === TRACE.pace_ms).length >= 10, 'batches are paced');
+
+  // A 429 gets the LONG rate-limit wait (out of the minute window), not the
+  // quick backoff — and the pause is surfaced via onNote.
+  const rlWaits = [], notes = [];
+  const fail429Once = (() => { let k = 0; return async (url) => { k++; if (k === 1) return { ok: false, status: 429 }; return terrainFetch(() => 100)(url); }; })();
+  await traceHorizon(SITE, 100, { fetchFn: fail429Once, sleep: async (ms) => { rlWaits.push(ms); }, onNote: (m) => notes.push(m) });
+  assert.equal(rlWaits[0], TRACE.rateBackoff_ms[0], '429 waits out the minute window');
+  assert.ok(notes.some((m) => /rate-limited — pausing 20 s/.test(m)), `pause surfaced: ${notes[0]}`);
 });
 
 test('fetchElevations: batch URL + parsed metres, fails closed', async () => {

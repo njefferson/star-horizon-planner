@@ -97,11 +97,19 @@ export function applyPinsToProfile(profile, pins) {
 // per 10° ray, sample elevations at log-spaced distances (dense near, sparse
 // far), take the max apparent altitude, and note WHERE it came from (the
 // argmax point draws the "horizon ring" on the map).
+// ROOT CAUSE, confirmed on-device 2026-07-18: Open-Meteo's free rate limit
+// meters ~600 per MINUTE counting each COORDINATE, not each request — the old
+// 864-coordinate trace died at exactly 600/864 ≈ 69% with "elevation API 429"
+// at every site. So the whole trace must fit one minute's budget: 36 rays ×
+// 16 samples = 576 coordinates (+1 for the site) — under 600, still
+// log-spaced dense-near. A 429 anyway (e.g. two traces back-to-back) waits
+// out the minute window instead of burning quick retries.
 export const TRACE = {
-  azStep: 10, minDist_m: 150, maxDist_m: 40000, samplesPerRay: 24,
+  azStep: 10, minDist_m: 150, maxDist_m: 40000, samplesPerRay: 16,
   batchSize: 50,               // half the documented 100 — shorter URLs, gentler
   attempts: 3,                 // per batch, with real backoff between attempts
-  backoff_ms: [800, 2000],     // wait before attempt 2, then before attempt 3
+  backoff_ms: [800, 2000],     // non-429 failures: quick retries
+  rateBackoff_ms: [20000, 45000], // 429: wait out the minute window
   pace_ms: 150,                // breather between successive batches
 };
 
@@ -126,7 +134,7 @@ export function traceSamplePoints(site, T = TRACE) {
  * (0..1) is for a silent visual meter — announce start/done, not every tick.
  * @returns { points: [{ az, alt, dist_m, lat, lon, elev_m }, …] } 36 rays.
  */
-export async function traceHorizon(site, siteElev_m, { fetchFn, onProgress, sleep, T = TRACE } = {}) {
+export async function traceHorizon(site, siteElev_m, { fetchFn, onProgress, onNote, sleep, T = TRACE } = {}) {
   const wait = sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
   const samples = traceSamplePoints(site, T);
   const elevs = new Array(samples.length);
@@ -135,7 +143,15 @@ export async function traceHorizon(site, siteElev_m, { fetchFn, onProgress, slee
     const chunk = samples.slice(i, i + B);
     let got, lastErr;
     for (let attempt = 0; attempt < (T.attempts || 3); attempt++) {
-      if (attempt > 0) await wait(T.backoff_ms?.[attempt - 1] ?? 1000); // real backoff, not an instant re-poke
+      if (attempt > 0) {
+        // 429 = the per-minute coordinate budget is spent — wait it out.
+        // Anything else gets the quick backoff.
+        const rated = /429/.test(String(lastErr?.message || ''));
+        const ms = (rated ? T.rateBackoff_ms : T.backoff_ms)?.[attempt - 1] ?? 1000;
+        if (rated && onNote) onNote(`elevation service rate-limited — pausing ${Math.round(ms / 1000)} s…`);
+        await wait(ms);
+        if (rated && onNote) onNote('');
+      }
       try { got = await fetchElevations(chunk, fetchFn); lastErr = null; break; }
       catch (e) { lastErr = e; }
     }

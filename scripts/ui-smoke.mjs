@@ -106,11 +106,13 @@ await page.route(/tile\.opentopomap\.org/, tilePng);
 await page.route(/api\.open-meteo\.com\/v1\/elevation/, (r) => {
   const u = new URL(r.request().url());
   const lats = u.searchParams.get('latitude').split(',').map(Number);
-  // Synthetic terrain for the 360° trace: a 600 m plateau starting ~4.4 km
-  // south of the Smoke Yard site (lat < 37.46); 100 m everywhere else. The
-  // nearest qualifying ray sample (~4.5 km) subtends ≈6.3° — so a correct
-  // max-over-ray trace reports ~6° due south and ~0° due north.
-  r.fulfill({ contentType: 'application/json', body: JSON.stringify({ elevation: lats.map((la) => (la < 37.46 ? 600 : 100)) }) });
+  // Synthetic terrain for the 360° trace: a 600 m plateau starting ~4.25 km
+  // south of the Smoke Yard site (lat < 37.4618); 100 m everywhere else. With
+  // 16 log-spaced samples/ray, the due-south ray's i=9 sample (4283 m) is the
+  // ONLY ray that reaches the plateau at that distance (az 170/190 fall 29 m
+  // short and first qualify farther out, lower) — so a correct max-over-ray
+  // trace reports ≈6.6° uniquely at az 180 and ~0° due north.
+  r.fulfill({ contentType: 'application/json', body: JSON.stringify({ elevation: lats.map((la) => (la < 37.4618 ? 600 : 100)) }) });
 });
 // Deterministic cloud forecast: fulfil the Open-Meteo forecast call with a
 // synthetic ramp spanning ±48 h of "now", so the Tonight cloud strip renders
@@ -256,7 +258,7 @@ await step('terrain: 360° trace applies the horizon; map tap creates a site', a
   await page.evaluate(() => { location.hash = '#/horizon'; });
   await page.waitForSelector('.hz-svg');
   const max = await page.$eval('.hz-max', (e) => e.textContent);
-  ok(/tallest 6°/.test(max), `traced terrain landed in the editor (${max})`);
+  ok(/tallest 7°/.test(max), `traced terrain landed in the editor (${max})`);
 });
 
 await step('terrain map: Esri outage falls back to OpenTopoMap, announced', async () => {
