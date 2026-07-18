@@ -41,6 +41,16 @@ const SOURCES = [
 const FALLBACK_AFTER = 3; // consecutive tile errors (with no success) before swapping
 const START_ZOOM = 14;    // close-in: you're locating YOUR yard, not a region (device ask)
 
+// One trace consumes nearly all of the elevation service's ~600-coordinates-
+// per-minute budget, so a rapid second tap is GUARANTEED to rate-limit and
+// crawl through long pauses. The button rests a little over the minute
+// instead (Noah's ask: prevent the frustration, and say why). Module-level:
+// the budget is per-network, not per-site, so it survives view remounts and
+// site switches.
+const COOLDOWN_MS = 65000;
+let lastTraceStart = 0;
+const cooldownLeft = () => Math.max(0, lastTraceStart + COOLDOWN_MS - Date.now());
+
 let tm = null; // { site, siteElev, map, L, ring, tracing }
 let root = null;
 const mounted = () => root && root.isConnected;
@@ -106,9 +116,30 @@ function buildShell(app, site, nav) {
     head, caveat, mapBox, tileStatus,
     el('div.card-actions', {}, [traceBtn]),
     progress, summary, statusNode,
-    el('p.settings-foot', {}, 'The trace samples elevations along 36 rays (dense nearby, out to 40 km), keeps each ray’s HIGHEST apparent point — near ground can out-block a distant ridge — and applies the result to this site’s horizon (Undo in the toast). Tap the map to start a new site somewhere else.'),
+    el('p.settings-foot', {}, 'The trace samples elevations along 36 rays (dense nearby, out to 40 km), keeps each ray’s HIGHEST apparent point — near ground can out-block a distant ridge — and applies the result to this site’s horizon (Undo in the toast). Tap the map to start a new site somewhere else. One trace uses almost all of the free elevation service’s one-minute allowance, so the button rests about a minute between runs — tracing sooner would only hit the service’s limit and stall.'),
   );
   app.append(root);
+  if (cooldownLeft() > 0) startCooldownUI(); // a recent trace still owns the minute
+}
+
+// Tick the resting button down once a second. The countdown is visible text
+// only (a stream — kept OUT of the live regions); the standing note in the
+// footer carries the WHY for everyone, screen readers included.
+function startCooldownUI() {
+  const tick = () => {
+    if (!tm || !mounted()) return;
+    const btn = root.querySelector('#tm-trace');
+    if (!btn) return;
+    const left = cooldownLeft();
+    if (left <= 0 || tm.tracing) {
+      if (!tm.tracing) { btn.disabled = false; btn.textContent = '⛰ Trace terrain horizon (360°)'; }
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = `⛰ Trace again in ${Math.ceil(left / 1000)} s`;
+    tm.cooldownTimer = setTimeout(tick, 1000);
+  };
+  tick();
 }
 
 // --- map ---------------------------------------------------------------------
@@ -176,9 +207,10 @@ async function initSiteElevation(site) {
 
 // --- the trace ---------------------------------------------------------------
 async function runTrace(nav) {
-  if (!tm || tm.tracing) return;
+  if (!tm || tm.tracing || cooldownLeft() > 0) return;
   if (tm.siteElev == null) { await initSiteElevation(tm.site); if (!tm || tm.siteElev == null) return; }
   tm.tracing = true;
+  lastTraceStart = Date.now(); // the minute's budget is committed from here
   const btn = root.querySelector('#tm-trace');
   if (btn) btn.disabled = true;
   say('Tracing the terrain horizon — 36 directions out to 40 km…');
@@ -216,9 +248,7 @@ async function runTrace(nav) {
     say(`The trace failed part-way — ${err?.message || 'unknown error'}. Nothing was changed; try again.`);
   } finally {
     setProgress(null);
-    if (tm) tm.tracing = false;
-    const b = root && root.querySelector('#tm-trace');
-    if (b) b.disabled = false;
+    if (tm) { tm.tracing = false; startCooldownUI(); } // rest the button for the remainder of the minute
   }
 }
 
@@ -283,6 +313,9 @@ function say(msg) { const n = root && root.querySelector('#tm-status'); if (n) n
 function onHashLeave() { if (!location.hash.startsWith('#/horizon/map')) stopTerrainMap(); }
 export function stopTerrainMap() {
   window.removeEventListener('hashchange', onHashLeave);
-  if (tm && tm.map) { try { tm.map.remove(); } catch { /* already gone */ } }
+  if (tm) {
+    if (tm.cooldownTimer) clearTimeout(tm.cooldownTimer);
+    if (tm.map) { try { tm.map.remove(); } catch { /* already gone */ } }
+  }
   tm = null;
 }

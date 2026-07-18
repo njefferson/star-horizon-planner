@@ -494,6 +494,16 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.8.2 — 2026-07-18** (SW cache `horizon-v40`). **Trace cooldown**
+  (Noah's ask: prevent the try-again-too-fast frustration, and say why).
+  One trace spends nearly the whole elevation-service minute budget, so the
+  button now rests ~65 s after each run with a visible countdown ("Trace
+  again in 42 s"); the standing footer note explains the reason in plain
+  words. Cooldown is module-level (the budget is per-network, not per-site —
+  it survives view remounts and site switches); countdown text stays out of
+  the live regions (a stream, not an announcement). Smoke asserts the
+  resting button + the stated why. 157 unit, 50 contrast, 24 smoke, 0 axe
+  (34 scans).
 - **v2.8.1 — 2026-07-18** (SW cache `horizon-v39`). **Trace 429 root cause
   CONFIRMED and fixed.** Noah's iPad screenshots delivered the v2.7.1
   diagnostic's payoff: "elevation API 429" at 69%, every site. The arithmetic

@@ -239,6 +239,11 @@ await step('terrain: 360° trace applies the horizon; map tap creates a site', a
   const summary = await page.$eval('#tm-summary', (e) => e.textContent);
   ok(/Tallest terrain 6\.\d° at az 180°/.test(summary), `trace summary: ${summary}`);
   ok((await page.$$('.leaflet-overlay-pane path')).length >= 37, '36 trace rays + the ring through their ends drawn on the map');
+  // The button rests out the elevation service's minute budget (a second
+  // trace would only 429) — visible countdown + the standing footer note.
+  await page.waitForFunction(() => /Trace again in \d+ s/.test(document.querySelector('#tm-trace')?.textContent || ''));
+  ok(await page.$eval('#tm-trace', (e) => e.disabled), 'trace button rests after a run');
+  ok(/one-minute allowance/.test(await page.$eval('.settings-foot', (e) => e.textContent)), 'the WHY of the rest is stated in the note');
   await shot('terrain-trace.png');
 
   // Map tap → a NEW SITE (the map's remaining pointer job); non-pointer site
