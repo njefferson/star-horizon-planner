@@ -502,13 +502,14 @@ function header(state, nav, site, shown, favCount, previewing) {
       el('button.chip.ng-site', { onclick: () => nav.go('#/sites'), 'aria-label': `Site: ${label} — change` },
         [el('span', { 'aria-hidden': 'true' }, `📍 ${label}`)]),
     ]),
-    // Approximate seeded location → make setting the real one a one-tap job,
-    // right here, instead of a trip into Sites and a lat/long form.
-    site.approx ? el('div.ng-approx', { role: 'status' }, [
-      el('span.dim.small', {}, 'Placeholder location. For your real sky:'),
-      el('button.btn.small.primary', { onclick: () => useMyLocation(nav) }, '📍 Use my location'),
+    // Location actions are ALWAYS here (device pass 2026-07-18: they used to
+    // vanish after first run, leaving no way to add a site from Tonight). With
+    // a real site active, both flows offer "new site here" vs "move current".
+    el('div.ng-approx', site.approx ? { role: 'status' } : {}, [
+      site.approx ? el('span.dim.small', {}, 'Placeholder location. For your real sky:') : null,
+      el('button.btn.small' + (site.approx ? '.primary' : ''), { onclick: () => useMyLocation(nav) }, '📍 Use my location'),
       el('button.btn.small', { onclick: () => openLocationSearch(nav) }, '🔎 City or ZIP'),
-    ]) : null,
+    ]),
     previewing
       ? el('p.dim.small', {}, ['Tonight’s brightest showpieces above your horizon. ',
           el('button.linklike', { onclick: () => nav.go('#/targets') }, 'Pick your own in Targets'), '.'])

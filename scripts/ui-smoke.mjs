@@ -387,6 +387,35 @@ await step('live camera: mocked stream, AR overlay, keyboard reticle, sweep save
   ok(/tallest 18°/.test(max), `live-captured treeline applied: ${max}`);
 });
 
+await step('location: "Use my location" offers NEW site vs move (multi-site fix)', async () => {
+  // With a real (non-approx) active site, locating must never silently
+  // overwrite it — the single-point trap from the 2026-07-18 device pass.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition: (ok) => ok({ coords: { latitude: 37.61, longitude: -122.09 } }) },
+    });
+  });
+  await tab('Tonight');
+  await page.waitForSelector('.ng-approx .btn:has-text("Use my location")'); // visible even post-first-run now
+  await page.click('.ng-approx .btn:has-text("Use my location")');
+  await page.waitForSelector('.loc-dialog');
+  const dlgText = await page.$eval('.loc-dialog', (e) => e.textContent);
+  ok(/New site here/.test(dlgText) && /Move “Smoke Yard” here/.test(dlgText), `both choices offered: ${dlgText.slice(0, 80)}`);
+  await page.fill('.loc-dialog input', 'Overlook');
+  await page.click('.loc-dialog .btn.primary'); // ➕ New site here
+  await page.waitForFunction(() => /Overlook/.test(document.querySelector('.ng-site')?.textContent || ''));
+  // Smoke Yard survives, unmoved, and comes back as active for the rest of the journey.
+  await page.evaluate(() => { location.hash = '#/sites'; });
+  await page.waitForSelector('.site-row');
+  const rows = await page.$$eval('.site-row', (els) => els.map((e) => e.textContent).join('|'));
+  ok(/Smoke Yard/.test(rows) && /Overlook/.test(rows), 'both sites listed — nothing overwritten');
+  await page.click('.site-row:has-text("Smoke Yard") button');
+  await page.waitForSelector('.site-row.active:has-text("Smoke Yard")');
+  await page.evaluate(() => { location.hash = '#/'; });
+  await page.waitForSelector('.ng-sky-hero');
+});
+
 await step('targets: "Up tonight" narrows to the observable sky, then filters', async () => {
   await tab('Targets');
   await page.waitForSelector('.target-row');

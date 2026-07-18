@@ -500,6 +500,22 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.10.0 — 2026-07-18** (SW cache `horizon-v42`). **Escape the
+  single-point trap** (device pass: "the app only allows 'here' and edits it
+  — you can't add or manage points"). Root cause was design debt from the
+  v1.2 first-run flow: `useMyLocation`/city-search always UPDATED the active
+  site in place, and Tonight's location buttons vanished once the placeholder
+  was refined — after first run there was no add path outside Sites/map-tap.
+  Now: (1) locating with a real site active opens a choice — **➕ New site
+  here** (named, primary) vs **Move "‹name›" here** — never a silent
+  overwrite; the placeholder still refines in place (first-run magic kept).
+  (2) Tonight's location buttons are always visible. (3) The terrain map
+  draws **every site** — gold = active, white = others, tooltip names;
+  tapping another site's marker offers the switch (bubbling suppressed so a
+  marker tap doesn't also open the new-site dialog). Sites tab remains the
+  full manager (rename/delete/backups). 157 unit, 50 contrast, **25 smoke**
+  (new step: locate with a real site → both choices offered → new site
+  created, original intact), 0 axe (34 scans).
 - **v2.9.0 — 2026-07-18** (SW cache `horizon-v41`). **Editor robustness +
   workflow hand-off** (Noah's post-success device pass — the trace WORKS,
   ~9° terrain ring at the Airport valley site). Three asks: (1) "the top is

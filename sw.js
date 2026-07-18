@@ -1,7 +1,7 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v41'; // app v2.9.0 — editor: scroll-safe handle-only drags + undo/redo; post-trace next-steps hand-off
+const CACHE = 'horizon-v42'; // app v2.10.0 — multi-site location flows (new-vs-move dialog, always-visible buttons); all sites on the terrain map
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

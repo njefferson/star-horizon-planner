@@ -20,7 +20,7 @@
 // BYPASSES tile hosts entirely (iOS opaque-piping breakage — see sw.js).
 // =============================================================================
 import { el, clear, toast } from './dom.js';
-import { activeSite, addSite, setActiveSite, saveSiteHorizon } from '../model/sites.js';
+import { loadSites, activeSite, addSite, setActiveSite, saveSiteHorizon } from '../model/sites.js';
 import { makeHorizon, serializeHorizon, maxAltitude } from '../model/horizon.js';
 import { traceHorizon, fetchElevations } from '../model/terrain.js';
 
@@ -155,9 +155,26 @@ async function initMap(site, nav) {
   tm.L = L;
   const map = L.map('tm-map', { zoomControl: true }).setView([site.lat, site.lon], START_ZOOM);
   addTileSource(map, L, 0);
-  L.circleMarker([site.lat, site.lon], {
-    radius: 7, color: '#0b0e17', weight: 2, fillColor: '#ffd166', fillOpacity: 1,
-  }).addTo(map).bindTooltip(site.name);
+  // ALL sites live on the map (device pass 2026-07-18: it looked like one
+  // point being edited forever) — gold = active, white = others; tapping
+  // another site's marker offers the switch.
+  for (const s of loadSites()) {
+    const isActive = s.id === site.id;
+    const m = L.circleMarker([s.lat, s.lon], {
+      radius: isActive ? 7 : 6, color: '#0b0e17', weight: 2,
+      fillColor: isActive ? '#ffd166' : '#ffffff', fillOpacity: 1,
+      bubblingMouseEvents: false, // a marker tap must not ALSO open the new-site dialog
+    }).addTo(map).bindTooltip(isActive ? `${s.name} (active)` : s.name);
+    if (!isActive) {
+      m.on('click', () => {
+        if (confirm(`Switch to “${s.name}”?`)) {
+          setActiveSite(s.id);
+          toast(`“${s.name}” is now the active site.`);
+          setTimeout(() => nav.rerender(), 0); // defer past Leaflet's event stack
+        }
+      });
+    }
+  }
   map.on('click', (e) => openNewSiteDialog({ lat: e.latlng.lat, lon: e.latlng.lng }, nav));
   tm.map = map;
 }
