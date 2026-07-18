@@ -77,6 +77,28 @@ export function mosaicFor(sizeDeg, profile, { overlap = DEFAULT_OVERLAP } = {}) 
   return { fits, cols, rows, panels, overlap, tier: fits ? 'fits' : `mosaic ${cols}×${rows}` };
 }
 
+/**
+ * Panel centres for a mosaicFor() result, as tangent-plane offsets in DEGREES
+ * from the object centre ({ dx_deg east across the frame, dy_deg up }). The
+ * grid is symmetric about the centre with the same overlap-strided spacing
+ * mosaicFor counted panels with; a 1×1 fit is a single centred panel. The
+ * framing overlay maps these to pixels with one scale factor.
+ */
+export function mosaicLayout(fr, fov) {
+  const strideW = fov.w_deg * (1 - fr.overlap);
+  const strideH = fov.h_deg * (1 - fr.overlap);
+  const out = [];
+  for (let r = 0; r < fr.rows; r++) {
+    for (let c = 0; c < fr.cols; c++) {
+      out.push({
+        dx_deg: (c - (fr.cols - 1) / 2) * strideW,
+        dy_deg: (r - (fr.rows - 1) / 2) * strideH,
+      });
+    }
+  }
+  return out;
+}
+
 // --- Persistence + registry -------------------------------------------------
 function readJSON(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }

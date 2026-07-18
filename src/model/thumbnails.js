@@ -8,8 +8,14 @@
 // OFFLINE: these are network images. Displayed via a plain <img> (no CORS
 // needed just to show one), they use the browser cache and degrade to a
 // placeholder when offline or when a cutout isn't available — a network
-// feature that never blocks the offline core. (Cache-API precaching per object
-// is a later refinement.)
+// feature that never blocks the offline core. Favourited objects additionally
+// get their cutouts warmed into the Cache API (model/precache.js) so the field
+// works offline; the image SPECS below are shared so the page, the framing
+// overlay, and the precacher agree byte-for-byte on the URL.
+//
+// GEOMETRY: hips2fits' `fov` parameter is the angular size along the LARGEST
+// image dimension — the width for the 800×500 detail image (vertical FOV =
+// fov × height/width), both axes for the square list thumb.
 //
 // COORDS: the catalog stores RA in HOURS (like NGC1952 ra 5.57555); hips2fits
 // wants DEGREES, so RA is ×15 here. Dec is already in degrees.
@@ -31,6 +37,26 @@ export function raDeg(o) { return Number(o.ra) * 15; }
 export function thumbFovDeg(o, margin = 2.5) {
   const majDeg = o && o.size && o.size.maj ? o.size.maj / 60 : 0.1;
   return Math.max(0.15, Math.min(3, majDeg * margin));
+}
+
+/**
+ * The details page's wider framing: ~3× the major axis (vs the list's 2.5×),
+ * floored so point sources still get real sky context. One definition, used by
+ * the big image, the framing overlay, and the precacher — never recompute.
+ */
+export function detailFovDeg(o) {
+  const majDeg = o && o.size && o.size.maj ? o.size.maj / 60 : 0.15;
+  return Math.min(3, Math.max(0.3, majDeg * 3));
+}
+
+/** The exact image spec of the details page's big image. */
+export function detailImageSpec(o) {
+  return { width: 800, height: 500, fovDeg: detailFovDeg(o) };
+}
+
+/** The exact image spec of a Targets-row preview (fov defaults inside thumbUrl). */
+export function listImageSpec() {
+  return { width: 96, height: 96 };
 }
 
 /**

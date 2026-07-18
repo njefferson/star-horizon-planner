@@ -14,13 +14,14 @@
 // =============================================================================
 import { el, clear, toast } from './dom.js';
 import { loadCatalog, shortName, framing, isFavorite, toggleFavorite } from '../model/catalog.js';
-import { activeInstrument } from '../model/instruments.js';
+import { activeInstrument, fovOf, mosaicLayout } from '../model/instruments.js';
 import { activeSite } from '../model/sites.js';
 import { makeObserver, altAz, altitudeCurve } from '../model/astro.js';
 import { makeHorizon, isAbove } from '../model/horizon.js';
 import { nightWindow } from '../model/night.js';
-import { thumbUrl } from '../model/thumbnails.js';
+import { thumbUrl, detailImageSpec } from '../model/thumbnails.js';
 import { fetchDescription } from '../model/describe.js';
+import { warmObject, pruneObject } from '../model/precache.js';
 
 function idFromHash() {
   const raw = (location.hash.split('/')[2] || '').split('?')[0];
@@ -51,7 +52,8 @@ export async function renderTargetDetail(app, state, nav) {
     el('div.td-head', {}, [
       el('button.btn.small', { onclick: () => nav.go('#/targets'), 'aria-label': 'Back to Targets' }, '‹ Targets'),
     ]),
-    bigImage(o),
+    bigImage(o, inst, fr),
+    frameCaption(o, inst, fr),
     el('h1', {}, shortName(o)),
     subtitle ? el('p.dim.td-sub', {}, subtitle) : null,
     el('p.td-tags.mono', {}, [
@@ -64,7 +66,7 @@ export async function renderTargetDetail(app, state, nav) {
     coordinatesSection(o, site),
     el('p.dim.tiny', {}, 'Image: DSS2 colour via CDS hips2fits. Description: Wikipedia. Both load when online.'),
     el('div.td-cta', {}, [
-      el('button.btn.primary.block', { onclick: () => { if (!isFavorite(o.id)) toggleFavorite(o.id); nav.go('#/'); } }, 'See in Tonight ›'),
+      el('button.btn.primary.block', { onclick: () => { if (!isFavorite(o.id)) { toggleFavorite(o.id); void warmObject(o); } nav.go('#/'); } }, 'See in Tonight ›'),
       favButton(o),
     ]),
   ].filter(Boolean));
@@ -81,24 +83,74 @@ export async function renderTargetDetail(app, state, nav) {
   });
 }
 
-// --- big image ---------------------------------------------------------------
-function bigImage(o) {
+// --- big image + framing overlay ---------------------------------------------
+// The image URL and the overlay geometry both read detailImageSpec(o) — ONE
+// spec, so the FOV rectangle cannot drift from the pixels behind it. The
+// instrument only changes in Settings (a different view); this page re-renders
+// on every navigation, so no live redraw is needed.
+function bigImage(o, inst, fr) {
+  const spec = detailImageSpec(o);
   const wrap = el('div.td-image');
   const img = el('img.td-img', {
     decoding: 'async', alt: `Representative survey image of ${shortName(o)}`,
-    src: thumbUrl(o, { width: 800, height: 500, fovDeg: Math.min(3, Math.max(0.3, wideFov(o))) }),
+    src: thumbUrl(o, spec),
   });
+  const overlay = el('canvas.td-frame', { 'aria-hidden': 'true' });
   img.addEventListener('error', () => {
     wrap.classList.add('broken');
+    // replaceChildren drops the overlay too — no frame on a placeholder; the
+    // caption below the image survives (framing is on-device data).
     wrap.replaceChildren(el('div.td-img-ph', {}, [
       el('span.td-img-ph-mark', { 'aria-hidden': 'true' }, '★'),
       el('span.dim.small', {}, 'Image needs a connection.'),
     ]));
   });
-  wrap.append(img);
+  wrap.append(img, overlay);
+  requestAnimationFrame(() => drawFrame(overlay, inst, fr, spec)); // needs a measured width
   return wrap;
 }
-function wideFov(o) { const maj = o.size && o.size.maj ? o.size.maj / 60 : 0.15; return maj * 3; }
+
+// The instrument frame is wider than the image in both axes → nothing visible
+// to draw; the caption says so instead. (One axis over: draw, the canvas clips.)
+function frameTooWide(inst, spec) {
+  const fov = fovOf(inst);
+  return fov.w_deg >= spec.fovDeg && fov.h_deg >= spec.fovDeg * (spec.height / spec.width);
+}
+
+// The overlay's accessible twin — same framing() data, always rendered, even
+// when the image errors. The canvas itself is decorative (aria-hidden).
+function frameCaption(o, inst, fr) {
+  const spec = detailImageSpec(o);
+  const shape = fr.fits ? 'fits in one frame' : `${fr.cols}×${fr.rows} mosaic (${Math.round(fr.overlap * 100)}% overlap)`;
+  const wide = frameTooWide(inst, spec) ? ' · frame wider than this image' : '';
+  return el('p.td-frame-cap.dim.small.mono', {}, `${inst.name} frame · ${shape}${wide}`);
+}
+
+// FOV rectangle(s) over the image: hips2fits' fov = the WIDTH of this 800×500
+// cutout, so one px-per-degree scale serves both axes (TAN ≤3° ≈ linear).
+// Casing-then-white strokes, visible on any sky (the sky/polaraim style).
+function drawFrame(canvas, inst, fr, spec) {
+  if (!canvas.isConnected || frameTooWide(inst, spec)) return;
+  const cssW = canvas.clientWidth || canvas.parentElement?.clientWidth || 320;
+  const cssH = canvas.clientHeight || Math.round(cssW * spec.height / spec.width);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d'); if (!ctx) return;
+  ctx.scale(dpr, dpr);
+  const scale = cssW / spec.fovDeg;                  // px per degree
+  const fov = fovOf(inst);
+  const rw = fov.w_deg * scale, rh = fov.h_deg * scale;
+  const panels = mosaicLayout(fr, fov);
+  const weight = fr.fits ? 2 : 1.5;                  // single frame slightly heavier
+  for (const p of panels) {
+    const cx = cssW / 2 + p.dx_deg * scale;
+    const cy = cssH / 2 - p.dy_deg * scale;          // dy_deg is "up"; screen y grows down
+    ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = weight + 1.5;
+    ctx.strokeRect(cx - rw / 2, cy - rh / 2, rw, rh);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = weight;
+    ctx.strokeRect(cx - rw / 2, cy - rh / 2, rw, rh);
+  }
+}
 
 // --- visibility (tonight altitude curve + current altitude) ------------------
 function visibilitySection(o, site) {
@@ -205,6 +257,9 @@ function favButton(o) {
       const now = toggleFavorite(o.id);
       b.setAttribute('aria-pressed', now ? 'true' : 'false');
       b.textContent = now ? '★ Favourited' : '☆ Favourite';
+      // Fire-and-forget: warm (or drop) this object's offline images. Never
+      // blocks the click; failures stay silent (model/precache.js doctrine).
+      void (now ? warmObject(o) : pruneObject(o));
       toast(now ? 'Added to favourites.' : 'Removed from favourites.');
     },
   }, on ? '★ Favourited' : '☆ Favourite');

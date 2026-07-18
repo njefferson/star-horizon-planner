@@ -88,6 +88,12 @@ page.on('dialog', (d) => d.accept()); // confirm() on remove/reset
 // connection reset, and module scripts (thus DOMContentLoaded and first
 // render) sit behind the pending stylesheet the whole time.
 await page.route(/fonts\.g(oogleapis|static)\.com/, (r) => r.abort());
+// hips2fits cutouts: fulfil with a real 1×1 JPEG so the <img> load (not error)
+// path runs — the framing overlay stays mounted and the precache steps can
+// warm the Cache API deterministically without network.
+const JPG1PX = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==', 'base64');
+await page.route(/alasky\.u-strasbg\.fr/, (r) => r.fulfill({ contentType: 'image/jpeg', body: JPG1PX }));
 // Deterministic cloud forecast: fulfil the Open-Meteo forecast call with a
 // synthetic ramp spanning ±48 h of "now", so the Tonight cloud strip renders
 // the same way on every run (no sandbox network, no real weather).
@@ -310,9 +316,52 @@ await step('target details: a row thumbnail opens the details page and back retu
   ok(await page.$('.td-image, .td-image.broken') !== null, 'representative image area present (image or offline placeholder)');
   ok(await page.$('.td-curve') !== null, 'tonight altitude curve renders');
   ok(await page.$('.td-cta .btn.block') !== null, 'prominent primary CTA present');
+
+  // Framing overlay (v2.5.0): the active instrument's FOV rectangle draws over
+  // the image (canvas is decorative), and the caption is the text channel.
+  const cap = await page.$eval('.td-frame-cap', (e) => e.textContent);
+  ok(/frame/.test(cap) && /fits in one frame|\d+×\d+ mosaic|frame wider/.test(cap), `framing caption: ${cap}`);
+  ok(/Seestar S50/.test(cap), 'caption names the active instrument');
+  if (!/frame wider/.test(cap)) {
+    const painted = await page.evaluate(() => {
+      const c = document.querySelector('.td-frame');
+      if (!c || !c.width) return false;
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
+      return false;
+    });
+    ok(painted, 'framing overlay has painted pixels');
+  }
+
   await page.click('.td-head .btn:has-text("Targets")');
   await page.waitForSelector('.target-row');
   ok(true, 'back to the Targets list');
+});
+
+await step('precache: favouriting warms the offline image cache; unfavouriting drains it', async () => {
+  // Use a details page so both URLs (list 96px + detail 800px) warm. M42 is
+  // already favourited (and warmed) by the earlier search step, so pick an
+  // UNFAVOURITED row and assert cache-count DELTAS, not absolutes.
+  // page.evaluate awaits promises (unlike waitForFunction — the NOTES gotcha),
+  // so poll with a plain loop.
+  await page.fill('.search', '');                    // clear the M42 search
+  await page.waitForTimeout(150);                    // list repaints in place
+  await page.click('.target-row:has(.fav:not(.on)) .target-thumb');
+  await page.waitForSelector('.td-cta');
+  const cacheCount = () => page.evaluate(async () =>
+    (await (await caches.open('horizon-thumbs-v1')).keys()).length);
+  const base = await cacheCount();
+  const favBtn = '.td-cta .btn[aria-pressed]';
+  ok(await page.$eval(favBtn, (e) => e.getAttribute('aria-pressed')) === 'false', 'picked an unfavourited object');
+  await page.click(favBtn);                          // favourite → warm
+  let n = base;
+  for (let i = 0; i < 40 && n < base + 2; i++) { n = await cacheCount(); if (n < base + 2) await page.waitForTimeout(100); }
+  ok(n === base + 2, `favourite warmed both cutouts into horizon-thumbs-v1 (${base} → ${n})`);
+  await page.click(favBtn);                          // unfavourite → prune
+  for (let i = 0; i < 40 && n > base; i++) { n = await cacheCount(); if (n > base) await page.waitForTimeout(100); }
+  ok(n === base, `unfavourite pruned this object's entries (back to ${n})`);
+  await page.click('.td-head .btn:has-text("Targets")');
+  await page.waitForSelector('.target-row');
 });
 
 await step('keyboard: focus survives an in-view filter toggle (no jump to h1)', async () => {

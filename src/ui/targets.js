@@ -9,6 +9,7 @@ import {
   isFavorite, toggleFavorite,
 } from '../model/catalog.js';
 import { thumbUrl } from '../model/thumbnails.js';
+import { warmObject, pruneObject } from '../model/precache.js';
 import { activeInstrument, fovOf } from '../model/instruments.js';
 import { activeSite } from '../model/sites.js';
 import { makeObserver } from '../model/astro.js';
@@ -206,6 +207,8 @@ function row(o) {
         const label = on ? 'Remove favourite' : 'Add favourite';
         b.title = label; b.setAttribute('aria-label', label);
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        // Fire-and-forget offline-image warming/pruning (model/precache.js).
+        void (on ? warmObject(o) : pruneObject(o));
       },
     }, fav ? '★' : '☆'),
     el('div.target-main', {}, [

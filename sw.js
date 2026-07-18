@@ -1,14 +1,14 @@
 // Horizon Planner service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v30'; // app v2.4.0 — instrument preset library (Dwarf II/3, Vespera/II/Pro, spec-verified) + sensor-mm entry in the custom-scope editor
+const CACHE = 'horizon-v31'; // app v2.5.0 — framing overlay on the details image + favourite-thumbnail offline precache (stable horizon-thumbs cache)
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',
   './src/ui/dom.js', './src/ui/theme.js', './src/ui/about.js', './src/ui/marks.js',
   './src/ui/targets.js', './src/ui/settings.js', './src/ui/horizoneditor.js', './src/ui/nightgraph.js', './src/ui/sites.js', './src/ui/polar.js', './src/ui/capture.js', './src/ui/livecapture.js', './src/ui/sky.js', './src/ui/polaraim.js', './src/ui/targetdetail.js', './src/ui/location.js',
   './src/model/astro.js', './src/model/instruments.js', './src/model/catalog.js', './src/model/horizon.js',
-  './src/model/night.js', './src/model/visibility.js', './src/model/sites.js', './src/model/polar.js', './src/model/capture.js', './src/model/arproject.js', './src/model/skyview.js', './src/model/thumbnails.js', './src/model/describe.js', './src/model/geocode.js', './src/model/geomag.js', './src/model/weather.js',
+  './src/model/night.js', './src/model/visibility.js', './src/model/sites.js', './src/model/polar.js', './src/model/capture.js', './src/model/arproject.js', './src/model/skyview.js', './src/model/thumbnails.js', './src/model/precache.js', './src/model/describe.js', './src/model/geocode.js', './src/model/geomag.js', './src/model/weather.js',
   './src/data/instruments.js', './src/data/catalog.json',
   './src/vendor/astronomy.js',
 ];
@@ -32,6 +32,9 @@ self.addEventListener('activate', (e) => {
     const c = await caches.open(CACHE);
     for (const k of await caches.keys()) {
       if (k === CACHE) continue;
+      // The page-managed favourite-image cache (model/precache.js THUMBS_CACHE)
+      // is version-independent — never delete it on an app-version bump.
+      if (k.startsWith('horizon-thumbs')) continue;
       // Carry forward runtime-cached data (fonts, and later per-site/night
       // weather + thumbnails) so a version bump doesn't force a re-download of
       // offline data. App code is NOT carried over — the new precache already
@@ -66,8 +69,12 @@ self.addEventListener('fetch', (e) => {
   // Everything else: stale-while-revalidate — serve the cache instantly for
   // offline/speed, but ALWAYS refetch in the background so a deployed change
   // reaches installed clients on their next load, without waiting for a
-  // service-worker version bump.
-  e.respondWith(caches.match(e.request).then((hit) => {
+  // service-worker version bump. NB: caches.match here is GLOBAL — it also
+  // serves the page-managed horizon-thumbs cache, which is how favourited
+  // objects' images render offline with no dedicated code path.
+  // ignoreVary: a cached cutout stored from a page fetch() must still match
+  // the <img>'s no-cors request even if the origin server sends Vary: Origin.
+  e.respondWith(caches.match(e.request, { ignoreVary: true }).then((hit) => {
     const refresh = fetch(e.request).then((res) => {
       if (res && (res.ok || (isFont && res.type === 'opaque'))) {
         const copy = res.clone();

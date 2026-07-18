@@ -2,7 +2,7 @@
 // No network: we assert the URL is well-formed and the coordinate/FOV maths.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { raDeg, thumbFovDeg, thumbUrl } from '../src/model/thumbnails.js';
+import { raDeg, thumbFovDeg, thumbUrl, detailFovDeg, detailImageSpec, listImageSpec } from '../src/model/thumbnails.js';
 
 const crab = { id: 'NGC1952', ra: 5.57555, dec: 22.0145, size: { maj: 8, min: 4 } };
 const point = { id: 'X', ra: 0, dec: 0 }; // sizeless → point source
@@ -32,6 +32,26 @@ test('URL is well-formed hips2fits with degrees, size, and format', () => {
   assert.equal(q.get('height'), '96');
   assert.equal(q.get('format'), 'jpg');
   assert.equal(q.get('projection'), 'TAN');
+});
+
+test('detailFovDeg: 3× margin with the 0.3° floor and 3° ceiling', () => {
+  assert.ok(Math.abs(detailFovDeg(crab) - (8 / 60) * 3) < 1e-9, 'sized → maj/60 × 3');
+  assert.ok(Math.abs(detailFovDeg(point) - 0.45) < 1e-9, 'sizeless → 0.15° default × 3');
+  assert.equal(detailFovDeg({ size: { maj: 1 } }), 0.3, 'tiny → 0.3° floor');
+  assert.equal(detailFovDeg({ size: { maj: 600 } }), 3, '10° object → 3° ceiling');
+});
+
+test('detailImageSpec reproduces the details page URL exactly', () => {
+  // The agreement test: the overlay + precacher consume this spec, so its URL
+  // must be byte-for-byte what bigImage renders. Hand-computed for the crab:
+  // fov = 8/60×3 = 0.4°, 800×500. (Made to fail once with fov=0.3000 — it did.)
+  const url = thumbUrl(crab, detailImageSpec(crab));
+  const q = new URL(url).searchParams;
+  assert.equal(q.get('fov'), '0.4000');
+  assert.equal(q.get('width'), '800');
+  assert.equal(q.get('height'), '500');
+  const list = thumbUrl(crab, listImageSpec());
+  assert.equal(new URL(list).searchParams.get('width'), '96');
 });
 
 test('explicit fovDeg overrides the computed field (details-page big image)', () => {

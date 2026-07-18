@@ -216,10 +216,14 @@ a { color: var(--accent-ink); } /* accent-ink, not --accent: links must clear 4.
 /* ── Target details page (Seestar-style: image → name → prose → curve → coords) */
 .td-head { margin-bottom: 4px; }
 /* Large, prominent image on black, like the Seestar object page. */
-.td-image { width: 100%; aspect-ratio: 16 / 10; margin: 6px 0 12px;
+.td-image { position: relative; width: 100%; aspect-ratio: 16 / 10; margin: 6px 0 12px;
   border-radius: var(--r); overflow: hidden; background: #05070d; border: 1px solid var(--line); }
 .td-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .td-image.broken { background: var(--card2); }
+/* Framing overlay: decorative FOV rectangle(s) over the image; the caption
+   below is the accessible channel. */
+.td-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.td-frame-cap { margin: -8px 0 12px; }
 .td-img-ph { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 6px;
   align-items: center; justify-content: center; text-align: center; }
 .td-img-ph-mark { font-size: 40px; color: var(--accent-ink); line-height: 1; }

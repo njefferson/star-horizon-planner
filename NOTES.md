@@ -9,10 +9,11 @@ Photography-Studio): free, on-device, offline-first PWA on Cloudflare Pages.
 The AR sky view that used to headline this block SHIPPED as v2.0.0; weather
 shipped as v2.1.0/v2.2.0; the polar "point to the pole" live aid as v2.3.0.
 What's next, in rough order:
-- **Remote-buildable roadmap next-ups:** offline thumbnail precache (the
-  stated "still to come" half of the details page), the framing overlay
-  (active FOV rectangle + mosaic grid over the object image — the last piece
-  of the multi-instrument item), map-pin terrain horizon (the big one).
+- **Remote-buildable roadmap next-up:** the **map-pin terrain horizon** is now
+  the head of the queue (Leaflet + free Esri imagery + keyless elevation API —
+  distant ridgelines only; trees still need the sensor capture). Beyond it:
+  the stretch capture items (auto-trace sky segmentation, panorama export,
+  per-device FOV calibration).
 - Device pass through v2.3.0 (incl. the polar-aim lock feel) **done — Noah,
   2026-07-18**. Repo metadata (About fields + v2.0.2 social preview) confirmed
   done the same day — the CLAUDE.md ritual is satisfied for this art rev.
@@ -392,11 +393,11 @@ tools:**
   **custom-scope editor** (enter focal length + sensor mm or px + pixel size → FOV)
   so anyone can plan for any telescope — *the px+µm editor shipped in v1.1;
   the preset library (Dwarf II, Dwarf 3, Vespera, Vespera II, Vespera Pro —
-  spec-verified, FOV computed) + sensor-mm entry shipped in v2.4.0*. What
-  remains: a **framing overlay** drawing the active FOV rectangle (+ mosaic
-  grid) over the object thumbnail. Presets ship in `data/instruments.js`;
-  customs persist in `horizon.instruments` and export/import with sites so
-  they aren't trapped in one browser.
+  spec-verified, FOV computed) + sensor-mm entry shipped in v2.4.0; the
+  **framing overlay** (active FOV rectangle + mosaic grid over the details
+  image) shipped in v2.5.0 — the item is COMPLETE*. Presets ship in
+  `data/instruments.js`; customs persist in `horizon.instruments` and
+  export/import with sites so they aren't trapped in one browser.
 - **Weather overlay (Astroweather)** — SHIPPED in full: clouds v2.1.0, the rest
   v2.2.0 (Noah's Clear-Sky-Chart reference): hi/mid/lo clouds + 7Timer seeing/
   transparency + on-device darkness + wind/RH/°F, all under the night graph on
@@ -418,7 +419,10 @@ tools:**
   `<img>` (no CORS needed to display); degrades to a labelled placeholder
   offline — never a broken glyph. Cache-API precache-per-object still to come.
   Placement + details layout are being tuned to Noah's screenshots (the Seestar
-  look = DSS2 colour). SW v14.
+  look = DSS2 colour). SW v14. *v2.5.0 finished the item: favourited objects'
+  cutouts (list + detail) precache into the stable `horizon-thumbs-v1` Cache-API
+  cache (`model/precache.js`) and survive SW version bumps — offline in the
+  field shows real imagery; never-warmed objects keep the honest placeholder.*
 - **Map-pin terrain horizon** (Noah's "10° in 360°" scaling idea): drop pins on a
   **keyless** satellite map (Leaflet + free Esri imagery — NOT Google Maps, which
   needs an API key + billing) + a free elevation API to estimate a **terrain**
@@ -476,6 +480,25 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.5.0 — 2026-07-18** (SW cache `horizon-v31`). **Framing overlay +
+  offline favourite precache** — the last two small roadmap stubs, one
+  surface. The details image now draws the ACTIVE instrument's FOV rectangle
+  (+ overlap-strided mosaic grid via new `mosaicLayout()`) over the DSS2
+  cutout, casing-then-white strokes; a text caption ("Seestar S50 frame ·
+  3×2 mosaic (10% overlap)" / "frame wider than this image") is the
+  accessible twin and renders even when the image can't (canvas aria-hidden,
+  zero new contrast pairs). Geometry keys off ONE shared spec
+  (`thumbnails.js detailImageSpec`) so the rectangle can't drift from the
+  pixels. **Precache** (`model/precache.js`): favouriting warms both cutouts
+  into the stable `horizon-thumbs-v1` cache (fire-and-forget, fail-soft,
+  concurrency 3); unfavouriting prunes; an idle boot sweep reconciles
+  pre-existing favourites. sw.js activate now PRESERVES `horizon-thumbs*`
+  across version bumps and its global caches.match serves the cache with no
+  new code path (`ignoreVary` guards Vary-header misses). CSP: alasky joins
+  connect-src (fetch-warming; img-src already allowed display). 148 unit
+  (URL-agreement test made to fail once), 50 contrast, 22 smoke (1×1-JPEG
+  hips2fits fixture; warm/prune cache deltas), 0 axe (32 scans).
+  NEEDS-HIS-HANDS: favourite on wifi → airplane mode → images still render.
 - **v2.4.0 — 2026-07-18** (SW cache `horizon-v30`). **Instrument preset
   library + sensor-mm entry** (the multi-instrument roadmap item, minus the
   framing overlay). Five new bundled presets in `data/instruments.js`:

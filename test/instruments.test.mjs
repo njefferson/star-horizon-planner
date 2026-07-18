@@ -18,7 +18,7 @@ globalThis.localStorage = (() => {
 })();
 
 const {
-  fovOf, pixelScale, mosaicFor, zenithDeadZone,
+  fovOf, pixelScale, mosaicFor, mosaicLayout, zenithDeadZone,
   activeInstrument, setActiveInstrument, instrumentById, allInstruments,
   addCustomInstrument, removeCustomInstrument, makeCustomInstrument,
 } = await import('../src/model/instruments.js');
@@ -71,6 +71,29 @@ test('preset library: ids unique, every profile complete', () => {
   near(pro.w_deg, pro.h_deg, 1e-9, 'Vespera Pro is square');
   assert.equal(instrumentById('dwarf3').mount.eqCapable, true, 'Dwarf 3 has EQ mode');
   assert.equal(instrumentById('dwarf2').mount.eqCapable, false, 'Dwarf II does not');
+});
+
+test('mosaicLayout: centred panel grid at the overlap stride', () => {
+  const fov = fovOf(S50);
+  // A fit is one centred panel.
+  const one = mosaicLayout(mosaicFor({ w_deg: 0.5, h_deg: 0.3 }, S50), fov);
+  assert.deepEqual(one, [{ dx_deg: 0, dy_deg: 0 }]);
+  // 2×1: two columns at ±stride/2, one centred row.
+  const fr2 = mosaicFor({ w_deg: fov.w_deg * 1.5, h_deg: 0.3 }, S50);
+  assert.equal(fr2.tier, 'mosaic 2×1');
+  const two = mosaicLayout(fr2, fov);
+  const strideW = fov.w_deg * (1 - fr2.overlap);
+  assert.equal(two.length, 2);
+  assert.ok(Math.abs(two[0].dx_deg + strideW / 2) < 1e-12 && Math.abs(two[1].dx_deg - strideW / 2) < 1e-12);
+  assert.ok(two.every((p) => p.dy_deg === 0));
+  // 3×2: symmetric about the centre; total extent spans (n−1) strides + one FOV.
+  const fr6 = mosaicFor({ w_deg: fov.w_deg * 2.5, h_deg: fov.h_deg * 1.5 }, S50);
+  assert.equal(fr6.panels, 6);
+  const six = mosaicLayout(fr6, fov);
+  const xs = six.map((p) => p.dx_deg), ys = six.map((p) => p.dy_deg);
+  assert.ok(Math.abs(Math.max(...xs) + Math.min(...xs)) < 1e-12, 'x-symmetric');
+  assert.ok(Math.abs(Math.max(...ys) + Math.min(...ys)) < 1e-12, 'y-symmetric');
+  assert.ok(Math.abs((Math.max(...xs) - Math.min(...xs)) - 2 * strideW) < 1e-12, '3 cols span 2 strides');
 });
 
 test('fovOf honours an explicit override', () => {

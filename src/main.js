@@ -18,6 +18,8 @@ import { renderLiveCapture } from './ui/livecapture.js';
 import { renderSky } from './ui/sky.js';
 import { renderTargetDetail } from './ui/targetdetail.js';
 import { loadSites, requestPersistence, ensureDefaultSite } from './model/sites.js';
+import { loadCatalog, favoriteIds } from './model/catalog.js';
+import { sweepFavorites } from './model/precache.js';
 import { maybeWelcome } from './ui/location.js';
 
 const state = {
@@ -135,6 +137,14 @@ window.addEventListener('hashchange', () => render(true));
   // Existing data (sites/horizons predating this call) deserves protection
   // from storage eviction too — new writes re-request it in model/sites.js.
   if (loadSites().length) requestPersistence();
+
+  // Idle sweep: reconcile the offline-image cache with the favourite set —
+  // warms favourites from before precaching existed and retries past failures.
+  // Idle so it never competes with first paint; fail-soft by design.
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 3000));
+  idle(() => {
+    loadCatalog().then((objs) => sweepFavorites(objs, favoriteIds())).catch(() => {});
+  });
 })();
 
 // Register the service worker for offline / installable PWA.
