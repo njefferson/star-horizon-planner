@@ -10,18 +10,17 @@
 // level phone. iOS supplies `webkitCompassHeading` directly (tilt-compensated,
 // magnetic); Android's absolute α goes through headingFromAlpha().
 //
-// CALIBRATION. Every device heading is MAGNETIC and locally disturbed;
-// declination alone runs to ~±15° across the US — over a full editor row. One
-// sighting of the Sun (whose true azimuth astro.js computes) yields an offset
-// that corrects declination AND local interference at once. Manual offset
-// entry is the night-time fallback.
+// CALIBRATION. Every device heading is MAGNETIC. The magnetic-to-true offset
+// (declination) is a KNOWN, published quantity — model/geomag.js computes it
+// from the site's coordinates via the World Magnetic Model — so applyOffset()
+// corrects a heading to true north automatically, no Sun sighting. A manual
+// offset stays available for local iron/interference.
 //
 // SWEEP. Samples accumulate into 1° azimuth bins; each bin's altitude is the
 // MEDIAN of its samples (robust to hand jitter and single-sample outliers).
 // The finished profile has one point per covered bin — sampleAt() already
 // interpolates linearly across uncovered gaps, so no fill pass is needed.
 // =============================================================================
-import { sunAltAz } from './astro.js';
 import { ALT_MIN, ALT_MAX, makeHorizon } from './horizon.js';
 
 const norm360 = (az) => ((az % 360) + 360) % 360;
@@ -61,21 +60,6 @@ export function calibrationOffset(trueAzimuth, measuredHeading) {
 
 /** True azimuth from a measured heading and a calibration offset. */
 export function applyOffset(heading, offset) { return norm360(heading + offset); }
-
-/**
- * Calibrate against the Sun: aim the top edge at the Sun, pass the measured
- * heading. `ok` is false when the Sun isn't up to sight (use manual offset).
- * @returns { ok, offset, sunAzimuth, sunAltitude }
- */
-export function sunCalibration(measuredHeading, observer, date) {
-  const sun = sunAltAz(observer, date);
-  return {
-    ok: sun.altitude > -0.5,
-    offset: calibrationOffset(sun.azimuth, measuredHeading),
-    sunAzimuth: sun.azimuth,
-    sunAltitude: sun.altitude,
-  };
-}
 
 // --- sweep session -----------------------------------------------------------
 

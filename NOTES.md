@@ -237,10 +237,12 @@ NEEDS-HIS-HANDS half; the smoke pass drives the whole flow synthetically):**
 - **9c** `model/capture.js` (100% headless): top-edge pointing math from
   device Euler angles — heading = (360 − α) % 360 and altitude = β hold
   EXACTLY for the sighting axis under the W3C Z-X′-Y″ convention (the device
-  Y-axis is invariant under γ); **Sun-azimuth calibration** (offset = true −
-  measured, wrapped; fixes magnetic declination + local interference in one
-  sighting) with manual-offset fallback; sweep session → 1° bin medians → gap
-  interpolation → points; coverage metrics (% + widest gap).
+  Y-axis is invariant under γ); **magnetic→true correction by WMM declination**
+  (see `model/geomag.js`) applied automatically from the site's coordinates,
+  with a manual-offset override for strong local iron; sweep session → 1° bin
+  medians → gap interpolation → points; coverage metrics (% + widest gap).
+  NOTE: the old "sight the Sun (through a filter)" calibration is REMOVED — the
+  filter warning was a UX smell and declination is a known, published quantity.
 - **9d** `ui/capture.js` — no-camera v1: sight along the phone's top edge
   (PS-Align style; the camera+crosshair preview from the roadmap layers on
   later). iOS `requestPermission()` on a tap / `deviceorientationabsolute` on
@@ -332,9 +334,10 @@ tools:**
   treeline; iOS `DeviceOrientationEvent.requestPermission()` on a tap. COMPASS
   TRUTH: `webkitCompassHeading` is **MAGNETIC** north (Android: use
   `deviceorientationabsolute`) — declination runs to ~±15° across the US, more
-  than a full 10° bin, so **calibration against the Sun's computed azimuth is
-  the PRIMARY flow** (one sighting corrects declination + local interference; a
-  bright star works at night), bundled declination model as fallback. Settle
+  than a full 10° bin, so the heading is **corrected to true north by the
+  bundled WMM declination model** (`model/geomag.js`), computed from the site's
+  coordinates, with a manual-offset override. (Superseded the earlier Sun-sight
+  calibration — removed 2026-07-18; filter warning was a UX smell.) Settle
   horizon storage resolution first (sensor sweeps outresolve the 36-row grid).
   **Device-only — not headless-testable; a NEEDS-HIS-HANDS feature.**
 - **Polar-alignment tools** (Noah's ask; the synergy showcase):

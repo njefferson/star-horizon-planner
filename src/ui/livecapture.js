@@ -26,10 +26,10 @@
 // =============================================================================
 import { el, clear, toast } from './dom.js';
 import { activeSite, saveSiteHorizon } from '../model/sites.js';
-import { makeObserver } from '../model/astro.js';
 import { makeHorizon, maxAltitude, sampleAt } from '../model/horizon.js';
+import { declination, modelExpired } from '../model/geomag.js';
 import {
-  headingFromAlpha, applyOffset, sunCalibration,
+  headingFromAlpha, applyOffset,
   makeSession, addSample, sampleCount, coverage, largestGap, profileFromSession,
 } from '../model/capture.js';
 
@@ -49,10 +49,9 @@ function freshState() {
   return {
     stream: null,          // MediaStream, stopped on unmount
     source: null,          // 'ios' | 'absolute' | 'relative'
-    cam: null,             // { az, alt } true (offset-applied) camera axis
-    rawHeading: null,      // last magnetic heading, for Sun calibration
-    offset: 0,
-    calibrated: false,
+    cam: null,             // { az, alt } true (declination-corrected) camera axis
+    offset: 0,             // magnetic→true declination for this site (deg, east +)
+    declination: 0,        // the raw declination value, for the readout
     recording: false,
     reticleY: 0,           // normalised [−0.5,0.5] offset from centre (↑ negative)
     session: makeSession(1),
@@ -80,6 +79,10 @@ export function renderLiveCapture(app, state, nav) {
   }
 
   lc = freshState();
+  // Correct the magnetic compass to true north automatically from the site's
+  // coordinates via the World Magnetic Model (model/geomag.js).
+  lc.declination = declination(site.lat, site.lon);
+  lc.offset = lc.declination;
   root = el('div.lc-root');
 
   const video = el('video.lc-video', { autoplay: true, playsinline: true, muted: true, 'aria-hidden': 'true' });
@@ -108,7 +111,6 @@ export function renderLiveCapture(app, state, nav) {
       el('button.btn', { onclick: () => nudgeReticle(-2), 'aria-label': 'Move reticle down 2 degrees' }, '▼'),
     ]),
     el('div.lc-btns', {}, [
-      el('button.btn', { onclick: () => calibrateFromSun(site), 'aria-label': 'Calibrate by sighting the Sun' }, '☀ Calibrate'),
       el('button.btn', { onclick: resetSweep }, 'Reset'),
       el('button.btn.primary', { onclick: () => save(site, nav) }, 'Save'),
       el('button.btn', { onclick: () => { stopLive(); nav.go('#/capture'); }, 'aria-label': 'Switch to no-camera sensor capture' }, 'No camera'),
@@ -227,7 +229,6 @@ function onOrientation(e) {
     lc.source = (e.absolute || e.type === 'deviceorientationabsolute') ? 'absolute' : 'relative';
   }
   if (heading == null || e.beta == null) return;
-  lc.rawHeading = heading;
   const alt = Math.max(-90, Math.min(90, e.beta - 90)); // camera-pointing model
   lc.cam = { az: applyOffset(heading, lc.offset), alt };
   if (lc.recording) addSample(lc.session, lc.cam.az, alt); // record the axis (reticle at 0)
@@ -273,7 +274,6 @@ function toggleRecording() {
   if (!lc) return;
   // Arm before the first compass read is fine — samples start when it arrives.
   if (!lc.recording && !lc.cam) say('Armed — recording begins once the compass reads. Enable motion access if nothing happens.');
-  else if (!lc.recording && !lc.calibrated) say('Recording with RAW magnetic headings — calibrate against the Sun for true north.');
   lc.recording = !lc.recording;
   paintRecBtn();
   updateCoverage();
@@ -302,16 +302,6 @@ function markPoint() {
   addSample(lc.session, lc.cam.az, alt);
   updateCoverage();
   say(`Marked ${Math.round(lc.cam.az)}° az at ${alt.toFixed(0)}° alt. ${covText()}`);
-}
-
-function calibrateFromSun(site) {
-  if (!lc || lc.rawHeading == null) { toast('Point the camera at the Sun first (through a safe filter).'); return; }
-  const observer = makeObserver(site.lat, site.lon, site.elevation_m || 0);
-  const r = sunCalibration(lc.rawHeading, observer, new Date());
-  if (!r.ok) { toast('The Sun is below the horizon — use no-camera mode for a manual offset.'); return; }
-  lc.offset = r.offset;
-  lc.calibrated = true;
-  say(`Calibrated: compass is ${r.offset.toFixed(1)}° off true north.`);
 }
 
 function resetSweep() {
@@ -351,8 +341,9 @@ function updateReadout() {
     return;
   }
   const markAlt = altitudeAtScreenY(lc.reticleY, lc.cam.alt, lc.fov.vfov);
-  const cal = lc.calibrated ? '' : ' · uncalibrated';
-  r.textContent = `az ${lc.cam.az.toFixed(0)}° · reticle ${markAlt.toFixed(0)}° alt${cal}`;
+  // Show that the compass is corrected to TRUE north by the site's declination.
+  const decl = `· true N (${lc.declination >= 0 ? '+' : ''}${lc.declination.toFixed(1)}° decl)`;
+  r.textContent = `az ${lc.cam.az.toFixed(0)}° · reticle ${markAlt.toFixed(0)}° alt ${decl}`;
 }
 
 function draw(canvas) {

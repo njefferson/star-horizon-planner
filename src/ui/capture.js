@@ -1,9 +1,9 @@
 // =============================================================================
 // capture.js (UI) — sensor-trace horizon capture, v1: sight along the phone's
 // TOP EDGE (portrait, screen vertical, like a gunsight — the camera+crosshair
-// preview from the roadmap layers on later). Flow: enable sensors → calibrate
-// against the Sun (compass truth: device headings are magnetic and locally
-// disturbed) → sweep the treeline while recording → review coverage → save to
+// preview from the roadmap layers on later). Flow: enable sensors (magnetic
+// heading auto-corrected to true north by the site's declination — model/
+// geomag.js) → sweep the treeline while recording → review coverage → save to
 // the active site. All math lives in model/capture.js; this file is wiring.
 //
 // The orientation listener is a module-level singleton: it keeps feeding the
@@ -14,10 +14,10 @@
 // =============================================================================
 import { el, clear, toast } from './dom.js';
 import { activeSite, saveSiteHorizon } from '../model/sites.js';
-import { makeObserver } from '../model/astro.js';
 import { maxAltitude } from '../model/horizon.js';
+import { declination, modelExpired } from '../model/geomag.js';
 import {
-  headingFromAlpha, applyOffset, sunCalibration,
+  headingFromAlpha, applyOffset,
   makeSession, addSample, sampleCount, coverage, profileFromSession,
 } from '../model/capture.js';
 
@@ -26,8 +26,9 @@ const cap = {
   enabled: false,       // listener attached
   source: null,         // 'ios' | 'absolute' | 'relative'
   last: null,           // { heading, altitude } — magnetic/raw
-  offset: 0,
-  calibrated: false,
+  offset: 0,            // magnetic→true offset actually applied
+  declination: 0,       // WMM declination for the active site
+  manual: false,        // true once the user overrides the offset
   recording: false,
   session: makeSession(1),
 };
@@ -48,6 +49,10 @@ export function renderCapture(app, state, nav) {
       ]));
     return;
   }
+  // Correct magnetic → true north from this site's declination (WMM), unless
+  // the user has entered a manual override.
+  cap.declination = declination(site.lat, site.lon);
+  if (!cap.manual) cap.offset = cap.declination;
 
   root = el('div.cap-root');
   root.append(
@@ -149,47 +154,36 @@ function schedule() {
 }
 
 function sourceNote() {
-  if (cap.source === 'ios') return 'iOS compass (magnetic — calibrate below).';
-  if (cap.source === 'absolute') return 'Absolute compass (magnetic — calibrate below).';
-  if (cap.source === 'relative') return 'RELATIVE orientation only: the zero drifts — calibrate below and sweep promptly.';
+  if (cap.source === 'ios') return 'iOS compass (magnetic — corrected to true below).';
+  if (cap.source === 'absolute') return 'Absolute compass (magnetic — corrected to true below).';
+  if (cap.source === 'relative') return 'RELATIVE orientation only: the zero drifts — sweep promptly.';
   return 'Waiting for the first sensor reading…';
 }
 
-// --- 2 · calibrate -------------------------------------------------------------
+// --- 2 · true north (declination) ---------------------------------------------
 function calibrateCard(site) {
   const manual = el('input.loc-in.cap-offset', {
-    type: 'number', step: '0.1', placeholder: '0.0', value: cap.calibrated ? String(cap.offset.toFixed(1)) : '',
+    type: 'number', step: '0.1', placeholder: cap.declination.toFixed(1),
+    value: cap.manual ? String(cap.offset.toFixed(1)) : '',
     onchange: (e) => {
       const v = parseFloat(e.target.value);
-      if (Number.isFinite(v)) { cap.offset = v; cap.calibrated = true; repaint(); toast('Manual offset set.'); }
+      if (Number.isFinite(v)) { cap.offset = v; cap.manual = true; repaint(); toast('Manual offset applied.'); }
+      else { cap.manual = false; cap.offset = cap.declination; repaint(); }
     },
   });
   return el('section.pa-card', {}, [
-    el('h2', {}, '2 · Calibrate (compass truth)'),
-    el('p.dim.small', {}, 'Device headings are magnetic and locally disturbed — up to ~±15° off true north. One sighting of the Sun fixes it: point the camera at the Sun (through a safe filter — never look straight at it), then tap.'),
-    el('div.card-actions', {}, [
-      el('button.btn.primary', { onclick: () => calibrateFromSun(site), 'aria-label': 'Calibrate by sighting the Sun' }, '☀ Sighting the Sun — calibrate'),
-    ]),
+    el('h2', {}, '2 · True north'),
+    el('p.dim.small', {}, 'Device headings are magnetic. The magnetic-to-true offset (declination) is looked up from this site’s coordinates and applied automatically.'),
     el('p.small', { id: 'cap-cal', 'aria-live': 'polite' }, calText()),
-    el('label.fld', {}, [el('span', {}, 'Manual offset (°, east-positive) — night fallback'), manual]),
+    el('label.fld', {}, [el('span', {}, 'Override offset (°, east-positive) — for strong local iron'), manual]),
   ]);
 }
 
-function calibrateFromSun(site) {
-  if (!cap.enabled || !cap.last) { toast('Enable sensors first.'); return; }
-  const observer = makeObserver(site.lat, site.lon, site.elevation_m || 0);
-  const r = sunCalibration(cap.last.heading, observer, new Date());
-  if (!r.ok) { toast('The Sun is below the horizon — use the manual offset.'); return; }
-  cap.offset = r.offset;
-  cap.calibrated = true;
-  repaint();
-  toast(`Calibrated: compass is ${r.offset.toFixed(1)}° off true.`);
-}
-
 function calText() {
-  return cap.calibrated
-    ? `Offset ${cap.offset.toFixed(1)}° applied to every recorded sample.`
-    : 'Not calibrated — recordings would use raw magnetic headings.';
+  const expired = modelExpired() ? ' (magnetic model is past its 2030 refresh — recheck)' : '';
+  return cap.manual
+    ? `Manual offset ${cap.offset.toFixed(1)}° applied to every recorded sample.`
+    : `Declination ${cap.declination >= 0 ? '+' : ''}${cap.declination.toFixed(1)}° applied — headings are true north${expired}.`;
 }
 
 // --- 3 · sweep ------------------------------------------------------------------
@@ -211,7 +205,6 @@ function sweepCard() {
 
 function toggleRecording() {
   if (!cap.enabled) { toast('Enable sensors first.'); return; }
-  if (!cap.recording && !cap.calibrated) toast('Recording with RAW magnetic headings — calibrate for true north.');
   cap.recording = !cap.recording;
   repaint();
 }

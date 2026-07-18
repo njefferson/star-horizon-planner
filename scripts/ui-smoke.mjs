@@ -177,7 +177,7 @@ await step('capture: synthetic sensor sweep bins, covers the circle, saves', asy
   await page.evaluate(() => { location.hash = '#/capture'; });
   await page.waitForSelector('.cap-live');
   await page.click('.pa-card .btn:has-text("Enable compass")');
-  await page.click('#cap-rec'); // Record (uncalibrated → raw-headings toast, offset 0)
+  await page.click('#cap-rec'); // Record (headings auto-corrected to true north by the site declination)
   // Synthetic Android sweep, one event per degree: absolute α with
   // heading = 360 − α; an 18° south treeline over 4° open sky. Camera model:
   // altitude = β − 90, so a β of 108/94 aims the camera 18°/4° above level.

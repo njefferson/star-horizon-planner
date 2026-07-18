@@ -5,10 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   wrapOffset, headingFromAlpha, cameraPointing, calibrationOffset,
-  applyOffset, sunCalibration, makeSession, addSample, sampleCount,
+  applyOffset, makeSession, addSample, sampleCount,
   coverage, largestGap, profileFromSession,
 } from '../src/model/capture.js';
-import { makeObserver } from '../src/model/astro.js';
 import { sampleAt } from '../src/model/horizon.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b} (±${tol})`);
@@ -32,20 +31,6 @@ test('calibration offsets wrap the short way and invert cleanly', () => {
   assert.equal(calibrationOffset(350, 10), -20);
   assert.equal(applyOffset(350, 20), 10);
   assert.equal(applyOffset(10, -20), 350);
-});
-
-test('sunCalibration recovers a known compass error while the Sun is up', () => {
-  const obs = makeObserver(37.5, -122.0, 0);
-  const noonish = new Date('2026-03-20T20:00:00Z'); // ~13:00 PDT — Sun well up
-  const trueError = 13.4; // pretend declination + local interference
-  const first = sunCalibration(0, obs, noonish);
-  assert.ok(first.ok, 'Sun is up at local midday');
-  const measured = first.sunAzimuth - trueError; // what a miscalibrated compass reads
-  const cal = sunCalibration(measured, obs, noonish);
-  near(cal.offset, trueError, 1e-9, 'offset equals the injected error');
-  near(applyOffset(measured, cal.offset), cal.sunAzimuth, 1e-9, 'corrected heading hits the Sun');
-  const night = sunCalibration(0, obs, new Date('2026-03-20T08:00:00Z')); // ~1:00 PDT
-  assert.equal(night.ok, false, 'no Sun to sight at night');
 });
 
 test('sweep bins by azimuth and medians shrug off outliers', () => {
