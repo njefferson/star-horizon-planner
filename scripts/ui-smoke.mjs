@@ -825,6 +825,8 @@ await step('about: credits visible, scaffold copy gone', async () => {
   ok(/Clear Horizons/.test(text), 'rebrand: About carries the new name');
   ok(!/Horizon Planner/i.test(text), 'rebrand: the old name is gone from About');
   ok(/Clear Horizons/.test(await page.title()), `rebrand: document title renamed (${await page.title()})`);
+  // v2.16.4: release notes live IN the app (What's new + reinstall guidance), not a repo link.
+  ok(/What.s new/i.test(text) && /add it again|reinstall/i.test(text), 'About carries in-app What\'s-new + reinstall note');
   await page.keyboard.press('Escape');
 });
 

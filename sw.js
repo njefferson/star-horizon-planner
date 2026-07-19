@@ -1,7 +1,7 @@
 // Clear Horizons service worker — offline-first for the whole static app.
 // No network APIs are contacted in v1 (astronomy-engine is vendored and runs
 // on-device; Open-Meteo / hips2fits land on the roadmap). Bump CACHE on release.
-const CACHE = 'horizon-v51'; // app v2.16.3 — new app icon from the matching star-trail photo (art/icon-master.png + vector icon.svg)
+const CACHE = 'horizon-v52'; // app v2.16.4 — in-app What's new note in About (rename + reinstall-for-new-icon), self-contained (no repo link)
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png',
   './src/styles.css', './src/main.js',

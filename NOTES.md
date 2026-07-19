@@ -526,6 +526,13 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.16.4 — 2026-07-19** (SW cache `horizon-v52`). **Release notes live IN
+  the app.** Added a short "What's new" to the ⓘ About dialog — the rename to
+  Clear Horizons and, crucially, the **reinstall-to-get-the-new-icon** guidance
+  — because installed-PWA users never see the repo's NOTES.md. Self-contained:
+  no link out to the repository. (Owner: don't point users to the repo for
+  release notes; surface them in the app.) Smoke asserts the What's-new +
+  reinstall note is present; still avoids the old name (rebrand guard holds).
 - **v2.16.3 — 2026-07-19** (SW cache `horizon-v51`). **New app icon to match
   the card.** Noah generated a square star-trail icon (same aesthetic as the
   og-image); it's cropped clean (shadow/rounded-corner mockup removed, OS masks
