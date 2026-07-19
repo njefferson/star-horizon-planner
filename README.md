@@ -1,6 +1,8 @@
 # Clear Horizons
 
-*(formerly Star Horizon Planner — same app, same URL)*
+*(formerly Star Horizon Planner — same app, new home. The old address,
+star-horizon-planner.pages.dev, stays up during the transition and shows a
+banner: export your backup there, import it here.)*
 
 **Plan your night against your *real* horizon — the actual treeline, measured, not a flat 0°.**
 
@@ -10,9 +12,9 @@ physically-measured horizon** — the trees and rooftops that actually block you
 sky — plus the near-zenith dead-zone an alt-az mount can't track through. No
 accounts, no tracking, no network required after first load.
 
-🔭 **Live app:** <https://star-horizon-planner.pages.dev>
+🔭 **Live app:** <https://clear-horizons.pages.dev>
 
-[![CI](https://github.com/njefferson/star-horizon-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/njefferson/star-horizon-planner/actions/workflows/ci.yml)
+[![CI](https://github.com/njefferson/clear-horizons/actions/workflows/ci.yml/badge.svg)](https://github.com/njefferson/clear-horizons/actions/workflows/ci.yml)
 [![License: PolyForm NC 1.0.0](https://img.shields.io/badge/license-PolyForm--NC--1.0.0-blue)](./LICENSE.md)
 
 | Tonight | Measure your horizon | Targets |
@@ -73,7 +75,7 @@ in [`NOTES.md`](./NOTES.md). Specifically:
 - **Respects reduced-motion and zoom**; light + dark themes are both first-class.
 
 Found an accessibility problem? It's treated as a bug — please
-[open an issue](https://github.com/njefferson/star-horizon-planner/issues).
+[open an issue](https://github.com/njefferson/clear-horizons/issues).
 
 ## Data & licensing
 
@@ -128,6 +130,6 @@ Made by [Noah Jefferson](https://…). Photography: [@…](https://…).
 GitHub repo metadata isn't in this repo — set it once in the repo settings:
 
 - **Description:** "Offline-first astronomy planner built on your real, measured horizon."
-- **Website:** https://star-horizon-planner.pages.dev
+- **Website:** https://clear-horizons.pages.dev
 - **Topics:** `astronomy` `astrophotography` `seestar` `smart-telescope` `pwa` `offline-first` `stargazing`
 - **Social preview:** upload `og-image.png` (Settings → Social preview).

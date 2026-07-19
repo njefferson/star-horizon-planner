@@ -88,7 +88,7 @@ export function coverageStats(cov) {
  * pass shows a constant rotation in Stellarium, that one number is the fix
  * (the horizon list is unambiguously 0=N, so any offset is self-evident).
  */
-export function buildLandscapeIni({ name, author = 'Clear Horizons (star-horizon-planner)', lat, lon, elevation_m = 0 }) {
+export function buildLandscapeIni({ name, author = 'Clear Horizons (clear-horizons.pages.dev)', lat, lon, elevation_m = 0 }) {
   return [
     '[landscape]',
     `name = ${name || 'My site'}`,

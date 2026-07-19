@@ -1,8 +1,15 @@
-# Deploy Horizon Planner to Cloudflare Pages.
+# Deploy Clear Horizons to Cloudflare Pages.
 #
-# main    -> production          (star-horizon-planner.pages.dev)
+# main    -> production          (clear-horizons.pages.dev)
 # staging -> a Cloudflare PREVIEW deployment (the on-device gate before main)
 # any other pushed branch -> its own preview URL, production untouched.
+#
+# Tier 2 rename (2026-07-19): the Pages project is now `clear-horizons` (the
+# create step below mints it on first run). `main` ALSO still publishes to the
+# old `star-horizon-planner` project so the pre-rename origin carries the
+# in-app "we've moved" banner — localStorage can't cross origins, so users
+# there need the pointer + the backup export path. Drop that step (and the old
+# project) once Noah retires the old origin.
 #
 # Needs two repo secrets (same account as the sibling apps):
 #   CLOUDFLARE_API_TOKEN   (account-wide Pages:Edit token)
@@ -10,7 +17,7 @@
 # No functions/ proxy and no API keys — astronomy-engine is vendored and runs
 # on-device; the roadmap data sources (Open-Meteo, hips2fits) are keyless and
 # CORS-friendly, so there is nothing to proxy.
-name: Deploy Horizon Planner to Cloudflare Pages
+name: Deploy Clear Horizons to Cloudflare Pages
 
 on:
   push:
@@ -38,7 +45,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages project create star-horizon-planner --production-branch=main
+          command: pages project create clear-horizons --production-branch=main
 
       # Assemble the publishable site into dist/ (allow-list, no build step —
       # no-build vanilla ES modules) so repo internals (NOTES.md, review docs,
@@ -55,4 +62,14 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=star-horizon-planner --branch=${{ github.ref_name }} --commit-dirty=true
+          command: pages deploy dist --project-name=clear-horizons --branch=${{ github.ref_name }} --commit-dirty=true
+
+      # Transitional: keep the pre-rename origin current so it shows the
+      # migration banner. Production only — previews belong to the new project.
+      - name: Deploy to the old origin (migration banner)
+        if: github.ref_name == 'main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=star-horizon-planner --branch=main --commit-dirty=true

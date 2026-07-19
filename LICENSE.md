@@ -2,7 +2,7 @@
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>
 
-Required Notice: Copyright © 2026 Noah Jefferson (https://github.com/njefferson/star-horizon-planner)
+Required Notice: Copyright © 2026 Noah Jefferson (https://github.com/njefferson/clear-horizons)
 
 > **Scope.** These terms cover the application's own source code. They do NOT
 > cover third-party material shipped in this repository, which keeps its own

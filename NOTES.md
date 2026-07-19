@@ -28,9 +28,17 @@ install promotion (v2.14), and the **Clear Horizons Tier 1 rename**
   `node scripts/gen-assets.mjs`, then the manual Settings → Social preview
   upload ritual (CLAUDE.md). Repo About metadata (description/topics) also
   still says the old name until Tier 2 is decided.
-- **Tier 2 rename** (repo slug, Pages project/URL, deploy workflow,
-  CLAUDE.md canonical values + the metadata ritual) — **Noah's explicit
-  call, NOT authorized**; Tier 1 deliberately left every identifier alone.
+- **Tier 2 rename — AUTHORIZED ("Tier 2 go", 2026-07-19) and executed as
+  v2.16.0** (see Releases). Code side done: Pages project `clear-horizons`
+  (CI mints it), dual production deploy so the old origin shows the moved
+  banner, all slug/URL references flipped. STILL PENDING NOAH'S HANDS, ask
+  until confirmed (CLAUDE.md ritual): ① GitHub repo rename to
+  `njefferson/clear-horizons` (Settings → General), ② About-gear Website →
+  https://clear-horizons.pages.dev (description/topics carry over — verify),
+  ③ confirm the new URL serves and the old one shows the banner, ④ migrate
+  his own device (export backup on old origin → import on new → reinstall
+  the PWA), ⑤ eventually delete the old Pages project + drop the dual-deploy
+  step. Social preview stays blocked on new wordmark art.
 - Stretch: auto-trace sky segmentation, per-device FOV calibration — plus
   whatever the next device pass surfaces. Majors are Noah's call.
 - Repo metadata for the CURRENT art rev (About fields + v2.0.2 social
@@ -514,6 +522,22 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.16.0 — 2026-07-19** (SW cache `horizon-v48`). **Tier 2 rename: the
+  app's home is now clear-horizons.pages.dev** (Noah: "Tier 2 go"). Deploys
+  now target a NEW Cloudflare Pages project `clear-horizons` — deploy.yml's
+  existing idempotent create step mints it on first run, no dashboard work —
+  and `main` transitionally ALSO publishes to the old
+  `star-horizon-planner` project, because origins don't share localStorage:
+  users there need the new `ui/moved.js` banner (renders ONLY on the exact
+  old host; pure `movedAway()` predicate, unit-tested) telling them to
+  Sites → Export backup, import at the new address, reinstall. All
+  slug/URL references flipped: index.html canonical/OG/twitter URLs,
+  package.json name/homepage/repo/bugs, README (live link, badges, "new
+  home" note), SECURITY advisory link, LICENSE notice, CLAUDE.md canonical
+  Website, purge-deployments PROJECT, panorama landscape.ini author. The
+  MANUAL half (repo rename, About-gear website, old-project retirement) is
+  tracked in CURRENT STATE — not done until Noah confirms. 175 unit, 50
+  contrast, 26 smoke, 0 axe (34 scans).
 - **v2.15.0 — 2026-07-19** (SW cache `horizon-v47`). **The app is now CLEAR
   HORIZONS** — Tier 1 in-app rebrand (Noah: "Tier 1 go"; the name mirrors
   the astronomer's "clear skies"). Renamed everywhere USERS read:

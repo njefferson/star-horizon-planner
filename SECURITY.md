@@ -10,7 +10,7 @@ web fonts; the astronomy engine and catalog are bundled and run on-device.
 
 If you find a security issue, please **do not open a public issue**. Instead,
 report it privately via GitHub's
-[private vulnerability reporting](https://github.com/njefferson/star-horizon-planner/security/advisories/new)
+[private vulnerability reporting](https://github.com/njefferson/clear-horizons/security/advisories/new)
 (Security → Report a vulnerability). I'll acknowledge within a few days.
 
 Please include what you found, how to reproduce it, and the impact you expect.

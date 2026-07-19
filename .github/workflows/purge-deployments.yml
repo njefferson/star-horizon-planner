@@ -31,7 +31,7 @@ jobs:
     env:
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PROJECT: star-horizon-planner
+      PROJECT: clear-horizons # the post-Tier-2 project; the old star-horizon-planner project gets deleted whole once retired
     steps:
       - name: Purge preview deployments via Cloudflare API
         run: |

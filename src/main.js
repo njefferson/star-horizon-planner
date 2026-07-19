@@ -23,6 +23,7 @@ import { loadCatalog, favoriteIds } from './model/catalog.js';
 import { sweepFavorites } from './model/precache.js';
 import { maybeWelcome } from './ui/location.js';
 import { initInstall } from './ui/install.js';
+import { mountMovedNotice } from './ui/moved.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -132,6 +133,7 @@ window.addEventListener('hashchange', () => render(true));
 (function boot() {
   mountAbout();        // floating "about" button, available everywhere
   mountThemeToggle();  // floating moon/sun Night Mode toggle, everywhere
+  mountMovedNotice();  // old-origin-only banner: the app moved (Tier 2 rename)
   initInstall();       // capture beforeinstallprompt for the install nudge
   ensureDefaultSite(); // always have an active site → open into the sky, not a wall
   render();

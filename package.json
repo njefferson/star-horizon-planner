@@ -1,6 +1,6 @@
 {
-  "name": "star-horizon-planner",
-  "version": "2.15.0",
+  "name": "clear-horizons",
+  "version": "2.16.0",
   "private": true,
   "type": "module",
   "description": "Offline-first astronomy planner built around a custom, per-site, physically-measured horizon.",
@@ -15,13 +15,13 @@
     "horizon",
     "polar-alignment"
   ],
-  "homepage": "https://star-horizon-planner.pages.dev",
+  "homepage": "https://clear-horizons.pages.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/njefferson/star-horizon-planner.git"
+    "url": "git+https://github.com/njefferson/clear-horizons.git"
   },
   "bugs": {
-    "url": "https://github.com/njefferson/star-horizon-planner/issues"
+    "url": "https://github.com/njefferson/clear-horizons/issues"
   },
   "author": "Noah Jefferson",
   "license": "PolyForm-Noncommercial-1.0.0",

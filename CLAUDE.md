@@ -25,7 +25,9 @@ Standing agreement (owner's instruction, 2026-07-17):
 ### This repo's canonical values (paste targets)
 
 - **Description:** `Offline-first astronomy planner built on your real, measured horizon — not a flat 0°.`
-- **Website:** `https://star-horizon-planner.pages.dev`
+- **Website:** `https://clear-horizons.pages.dev` (Tier 2 rename, 2026-07-19 —
+  the repo is `njefferson/clear-horizons`; the old star-horizon-planner.pages.dev
+  origin stays up transitionally with a migration banner)
 - **Topics:** `astronomy` `astrophotography` `seestar` `smart-telescope` `pwa` `offline-first` `stargazing`
 - **Social preview:** a **branded** card. Keep `og-image.png` committed
   (regenerate with `node scripts/gen-assets.mjs` when the art changes) and
