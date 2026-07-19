@@ -1,6 +1,6 @@
 {
   "name": "clear-horizons",
-  "version": "2.16.1",
+  "version": "2.16.2",
   "private": true,
   "type": "module",
   "description": "Offline-first astronomy planner built around a custom, per-site, physically-measured horizon.",

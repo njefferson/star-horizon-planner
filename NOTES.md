@@ -23,11 +23,14 @@ install promotion (v2.14), and the **Clear Horizons Tier 1 rename**
   instructions render + the nudge disappears standalone; editor drag feel
   after the touch hardening; real outdoor trace/sweep/seam quality; the iOS
   `webkitCompassHeading` true-vs-magnetic test (COMPASS section below).
-- **Brand art for the rename**: og-image.png still carries the OLD wordmark
-  — it's baked into `art/og-master.png`, so it needs new approved art, then
-  `node scripts/gen-assets.mjs`, then the manual Settings → Social preview
-  upload ritual (CLAUDE.md). Repo About metadata (description/topics) also
-  still says the old name until Tier 2 is decided.
+- **Brand art for the rename — DONE (v2.16.2)**: `art/og-master.png` is now
+  a text-free star-trail photograph (Noah generated it from the app's brand
+  prompt after the procedural-scene attempts didn't satisfy), and the wordmark
+  + tagline are overlaid IN CODE by `gen-assets.mjs` (so future copy/photo
+  changes are one edit, never a re-baked wordmark). og-image.png regenerated.
+  STILL PENDING NOAH'S HANDS: the manual **Settings → Social preview** upload
+  of the new og-image.png, and the repo About description/topics still carry
+  the old name (verify/refresh during Tier 2 metadata pass).
 - **Tier 2 rename — DONE and CONFIRMED** ("Tier 2 go" → v2.16.0; Noah
   confirmed all four manual steps 2026-07-19: repo renamed to
   `njefferson/clear-horizons`, About-gear Website set to
@@ -523,6 +526,18 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.16.2 — 2026-07-19** (SW cache `horizon-v50`). **New branded og-image.**
+  The social card is now Noah's own star-trail photograph (real concentric
+  trails wheeling around Polaris, a conifer treeline cutting them at the
+  bottom) with the wordmark + tagline laid into the clean dark lower-left over
+  a soft scrim. Replaces the old wrong-wordmark card. `art/og-master.png` is
+  the text-free photo; `scripts/gen-assets.mjs` composites the type in code
+  (IBM Plex, matching the app) so future copy/photo swaps are a one-file edit.
+  Long backstory: many procedural attempts at a synthetic star-trail scene
+  (offset Polaris, rigid Big-Dipper template, diurnal circles) didn't land —
+  Noah generated the photo from the app's own brand prompt and it was the
+  one. Asset-only change; app code untouched. NEEDS-HIS-HANDS: the manual
+  Settings → Social preview upload.
 - **v2.16.1 — 2026-07-19** (SW cache `horizon-v49`). **Old origin frozen.**
   Noah confirmed every manual Tier 2 step (repo rename, About-gear website,
   both-URL browser check, his device migrated), so the transitional
