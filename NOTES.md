@@ -526,6 +526,17 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.16.5 — 2026-07-19** (SW cache `horizon-v53`). **What's-new pops once on
+  update.** New `ui/whatsnew.js`: the release notes (rename + reinstall-for-new
+  -icon) now appear automatically as a one-time dialog the first time a
+  RETURNING user (has `horizon.welcomed`) loads a build whose notes they
+  haven't seen — brand-new users get the welcome instead, and everyone has the
+  notes recorded so it shows at most once. Gated on `WHATSNEW_ID`, a CONTENT id
+  bumped only when the notes change (decoupled from package.json, so routine
+  patches don't re-nag). About shares the same `whatsNewBody()` — single source,
+  no repo link. Smoke: pops for a returning user, closes on "Got it", never
+  reappears. a11y: the popup is now the 6th scanned dialog (0 axe, both themes).
+  175 unit, 50 contrast, 27 smoke, 0 axe (36 scans).
 - **v2.16.4 — 2026-07-19** (SW cache `horizon-v52`). **Release notes live IN
   the app.** Added a short "What's new" to the ⓘ About dialog — the rename to
   Clear Horizons and, crucially, the **reinstall-to-get-the-new-icon** guidance

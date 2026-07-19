@@ -830,6 +830,22 @@ await step('about: credits visible, scaffold copy gone', async () => {
   await page.keyboard.press('Escape');
 });
 
+await step("what's new: pops once for a returning user, then never again", async () => {
+  // Returning user (welcomed) on a build whose notes they haven't seen → popup.
+  await page.evaluate(() => { localStorage.setItem('horizon.welcomed', '1'); localStorage.removeItem('horizon.whatsNewSeen'); });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.whatsnew-dialog', { timeout: 5000 });
+  const t = await page.$eval('.whatsnew-dialog', (e) => e.textContent);
+  ok(/What.s new/i.test(t), "What's-new popped for a returning user");
+  ok(/add it again|reinstall/i.test(t), 'popup carries the reinstall note (in-app, no repo link)');
+  await page.click('.whatsnew-dialog .btn.primary'); // Got it
+  await page.waitForTimeout(250);
+  ok(!(await page.$('.whatsnew-dialog')), 'popup closes on Got it');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(600);
+  ok(!(await page.$('.whatsnew-dialog')), 'does not pop again once seen');
+});
+
 await step('night mode: persists across reload and the checkbox reflects it', async () => {
   await tab('Settings');
   await page.check('.theme-checkbox');

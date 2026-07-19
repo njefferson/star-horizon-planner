@@ -24,6 +24,7 @@ import { sweepFavorites } from './model/precache.js';
 import { maybeWelcome } from './ui/location.js';
 import { initInstall } from './ui/install.js';
 import { mountMovedNotice } from './ui/moved.js';
+import { maybeWhatsNew } from './ui/whatsnew.js';
 
 const state = {
   // default = tonight; the night graph will hang off this once it lands.
@@ -139,6 +140,7 @@ window.addEventListener('hashchange', () => render(true));
   render();
   booted = true;       // subsequent navigations move focus to the view heading
   maybeWelcome(nav);   // first run: explain the app and get a real location
+  maybeWhatsNew();     // returning users: pop release notes once on a new build
 
   // Existing data (sites/horizons predating this call) deserves protection
   // from storage eviction too — new writes re-request it in model/sites.js.

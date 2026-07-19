@@ -125,6 +125,20 @@ for (const theme of ['light', 'dark']) {
       process.exitCode = 1;
     }
   }
+
+  // The What's-new popup isn't opened by a button — it auto-shows to a
+  // returning user on a build with unseen notes. Simulate that and scan it.
+  await page.goto(BASE + '#/', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => { localStorage.setItem('horizon.welcomed', '1'); localStorage.removeItem('horizon.whatsNewSeen'); });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  if (await page.waitForSelector('.whatsnew-dialog', { timeout: 4000 }).catch(() => null)) {
+    await page.waitForTimeout(100);
+    await runAxe("What's-new dialog");
+    await page.keyboard.press('Escape').catch(() => {});
+  } else {
+    console.error("a11y-scan: could not open What's-new dialog");
+    process.exitCode = 1;
+  }
   await ctx.close();
 }
 await browser.close();
@@ -139,4 +153,4 @@ if (violations.length) {
   }
   process.exit(1);
 }
-console.log(`\naxe: 0 violations across ${scanned} scans (12 views + 5 dialogs × 2 themes), WCAG 2.2 A/AA.`);
+console.log(`\naxe: 0 violations across ${scanned} scans (12 views + 6 dialogs × 2 themes), WCAG 2.2 A/AA.`);

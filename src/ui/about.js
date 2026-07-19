@@ -6,6 +6,7 @@
 // =============================================================================
 import { el } from './dom.js';
 import { installHelpHTML } from './install.js';
+import { whatsNewBody } from './whatsnew.js';
 
 const ABOUT_HTML = `
   <h2>Clear Horizons — what it's for</h2>
@@ -18,11 +19,7 @@ const ABOUT_HTML = `
   arcs over your own sky. Offline-first for the field; exports to Stellarium.</p>
 
   <h3>What's new</h3>
-  <p><strong>A fresh name and look.</strong> The app is now
-  <strong>Clear Horizons</strong> — same tool, same address — with a new
-  star-trail icon and link card. <strong>If you added it to your home screen
-  before this update, remove it and add it again</strong> to pick up the new
-  icon (installed icons are cached and don't refresh on their own).</p>
+  ${whatsNewBody()}
 
   ${installHelpHTML()}
 
