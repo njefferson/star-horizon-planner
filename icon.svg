@@ -1,35 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Vector rendition of the v2.0.2 brand art (art/icon-master.png): a glowing
-       gold star centred over a conifer treeline. Serves as favicon + manifest
-       SVG icon; the shipped PNGs are derived from the raster master instead
-       (scripts/gen-assets.mjs). maskable-safe: meaning stays central. -->
+  <!-- Vector rendition of the brand art (art/icon-master.png, 2026-07-19): a
+       long-exposure star trail wheeling around Polaris over a conifer treeline.
+       Favicon + manifest SVG icon; the shipped PNGs derive from the raster
+       master (scripts/gen-assets.mjs). Full-bleed square — the OS masks its own
+       corners; meaning (Polaris + trails) stays clear of the edges. -->
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1b1e34"/>
-      <stop offset="0.55" stop-color="#232a4a"/>
-      <stop offset="1" stop-color="#3a3a5c"/>
+      <stop offset="0" stop-color="#0e1534"/>
+      <stop offset="0.55" stop-color="#1a1b46"/>
+      <stop offset="0.82" stop-color="#38305a"/>
+      <stop offset="1" stop-color="#4a3a5c"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#ffd88a" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#ffd88a" stop-opacity="0"/>
-    </radialGradient>
+    <clipPath id="frame"><rect width="512" height="512"/></clipPath>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
-  <!-- scattered faint stars -->
-  <g fill="#e9ecff">
-    <circle cx="70" cy="90" r="2.5"/>
-    <circle cx="180" cy="60" r="2"/>
-    <circle cx="340" cy="74" r="2"/>
-    <circle cx="440" cy="120" r="2.5"/>
-    <circle cx="90" cy="210" r="2"/>
-    <circle cx="430" cy="230" r="2.5"/>
-    <circle cx="150" cy="300" r="1.8"/>
-    <circle cx="390" cy="300" r="1.8"/>
+  <g clip-path="url(#frame)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+    <!-- concentric star trails around Polaris (upper right); lower arcs are
+         covered by the treeline below, so they "set" behind the horizon -->
+    <g fill="none" stroke="#cdd8f2" stroke-width="1.4">
+      <circle cx="338" cy="150" r="34" opacity="0.55"/>
+      <circle cx="338" cy="150" r="62" opacity="0.4"/>
+      <circle cx="338" cy="150" r="94" opacity="0.5"/>
+      <circle cx="338" cy="150" r="130" opacity="0.32"/>
+      <circle cx="338" cy="150" r="170" opacity="0.42"/>
+      <circle cx="338" cy="150" r="214" opacity="0.3"/>
+      <circle cx="338" cy="150" r="262" opacity="0.36"/>
+      <circle cx="338" cy="150" r="314" opacity="0.26"/>
+      <circle cx="338" cy="150" r="372" opacity="0.3"/>
+      <circle cx="338" cy="150" r="436" opacity="0.22"/>
+    </g>
+    <!-- a couple of warm trails, like the photo -->
+    <g fill="none" stroke="#e8c98a" stroke-width="1.3" opacity="0.5">
+      <circle cx="338" cy="150" r="150"/>
+      <circle cx="338" cy="150" r="238"/>
+    </g>
+    <!-- Polaris -->
+    <circle cx="338" cy="150" r="3.4" fill="#f6f9ff"/>
+    <!-- the measured treeline: a silhouetted conifer horizon -->
+    <path fill="#0a0a18" d="M0 512 L0 468 L24 468 L46 402 L70 468 L104 468 L136 418 L170 468
+      L196 468 L228 372 L262 468 L296 468 L326 410 L358 468 L392 468 L430 366 L468 468
+      L512 468 L512 512 Z"/>
   </g>
-  <!-- the target star, glowing at centre sky -->
-  <circle cx="256" cy="204" r="95" fill="url(#glow)"/>
-  <path fill="#ffcf6b" d="M256 146 L271.3 183 L311.2 186.1 L280.7 212 L290.1 250.9 L256 230 L221.9 250.9 L231.3 212 L200.8 186.1 L240.7 183 Z"/>
-  <!-- the measured horizon: an uneven CONIFER treeline (the whole point) —
-       taller at the edges, dipping at centre, spiky stepped pine crowns -->
-  <path fill="#0e1020" d="M-20 512 L-20 480 L-44 480 L-35.5 444 L-24.025 444 L-25.3 399 L-17.65 399 L-10 350 L-2.35 399 L5.3 399 L4.025 444 L15.5 444 L24 480 L6 480 L13.5 450 L23.625 450 L22.5 413 L29.25 413 L36 372 L42.75 413 L49.5 413 L48.375 450 L58.5 450 L66 480 L50 480 L58 445 L68.8 445 L67.6 403 L74.8 403 L82 356 L89.2 403 L96.4 403 L95.2 445 L106 445 L114 480 L100 480 L107 455 L116.45 455 L115.4 425 L121.7 425 L128 392 L134.3 425 L140.6 425 L139.55 455 L149 455 L156 480 L142 480 L149.5 451 L159.625 451 L158.5 416 L165.25 416 L172 376 L178.75 416 L185.5 416 L184.375 451 L194.5 451 L202 480 L190 480 L196.5 461 L205.275 461 L204.3 438 L210.15 438 L216 412 L221.85 438 L227.7 438 L226.725 461 L235.5 461 L242 480 L234 480 L240 466 L248.1 466 L247.2 449 L252.6 449 L258 430 L263.4 449 L268.8 449 L267.9 466 L276 466 L282 480 L274 480 L280.5 462 L289.275 462 L288.3 440 L294.15 440 L300 416 L305.85 440 L311.7 440 L310.725 462 L319.5 462 L326 480 L316 480 L323 456 L332.45 456 L331.4 428 L337.7 428 L344 396 L350.3 428 L356.6 428 L355.55 456 L365 456 L372 480 L358 480 L365.5 450 L375.625 450 L374.5 413 L381.25 413 L388 372 L394.75 413 L401.5 413 L400.375 450 L410.5 450 L418 480 L400 480 L408 445 L418.8 445 L417.6 403 L424.8 403 L432 356 L439.2 403 L446.4 403 L445.2 445 L456 445 L464 480 L444 480 L452.5 442 L463.975 442 L462.7 396 L470.35 396 L478 344 L485.65 396 L493.3 396 L492.025 442 L503.5 442 L512 480 L488 480 L496 446 L506.8 446 L505.6 406 L512.8 406 L520 360 L527.2 406 L534.4 406 L533.2 446 L544 446 L552 480 L532 480 L532 512 Z"/>
 </svg>

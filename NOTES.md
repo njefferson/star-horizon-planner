@@ -526,6 +526,15 @@ tools:**
   when no site/horizon exists.
 
 ## Releases
+- **v2.16.3 — 2026-07-19** (SW cache `horizon-v51`). **New app icon to match
+  the card.** Noah generated a square star-trail icon (same aesthetic as the
+  og-image); it's cropped clean (shadow/rounded-corner mockup removed, OS masks
+  its own corners) into `art/icon-master.png`, from which `gen-assets.mjs`
+  derives icon-512/192/180 + apple-touch. `icon.svg` (favicon + manifest
+  vector) rebuilt to match — a vector star-trail wheeling around Polaris over a
+  conifer treeline, replacing the old gold-star vector. Photo reads down to
+  ~48px; the SVG stays simple for tiny favicon sizes. Asset-only. No manual
+  step (icons aren't GitHub metadata).
 - **v2.16.2 — 2026-07-19** (SW cache `horizon-v50`). **New branded og-image.**
   The social card is now Noah's own star-trail photograph (real concentric
   trails wheeling around Polaris, a conifer treeline cutting them at the
