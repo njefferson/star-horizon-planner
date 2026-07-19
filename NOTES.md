@@ -534,7 +534,11 @@ tools:**
   vector) rebuilt to match — a vector star-trail wheeling around Polaris over a
   conifer treeline, replacing the old gold-star vector. Photo reads down to
   ~48px; the SVG stays simple for tiny favicon sizes. Asset-only. No manual
-  step (icons aren't GitHub metadata).
+  step (icons aren't GitHub metadata). **USER NOTE — reinstall to get the new
+  icon:** an already-installed home-screen / PWA icon does NOT update in place
+  (the OS caches it at install time; a manifest icon change doesn't refresh it).
+  Remove the app and re-add it (reinstall) to pick up the new icon. New installs
+  and the browser-tab favicon update on their own.
 - **v2.16.2 — 2026-07-19** (SW cache `horizon-v50`). **New branded og-image.**
   The social card is now Noah's own star-trail photograph (real concentric
   trails wheeling around Polaris, a conifer treeline cutting them at the
