@@ -57,7 +57,8 @@ const ABOUT_HTML = `
   (OFL&nbsp;1.1). Free, no accounts, no tracking — everything stays on this
   device.</p>
 
-  <p class="about-credits"><a href="https://noahjefferson.pages.dev" target="_blank" rel="noopener">More free tools by Noah Jefferson&nbsp;&#8599;</a></p>
+  <p class="about-credits"><a href="https://noahjefferson.pages.dev" target="_blank" rel="noopener">More free tools by Noah Jefferson&nbsp;&#8599;</a>
+  &nbsp;&middot;&nbsp;<a href="https://noahjefferson.pages.dev/accessibility" target="_blank" rel="noopener">Accessibility</a></p>
 `;
 
 export function mountAbout() {
